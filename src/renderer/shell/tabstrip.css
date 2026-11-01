@@ -1,0 +1,71 @@
+/* Tab strip + bookmark bar (T18). Unlayered, so it wins over the skins' @layer rn-base, rn-skin: position and size
+   only here. Colours, bevels and fonts belong to skins/<id>/skin.css (T9). No inline styles: the only style
+   writes from JS are drag transforms through the CSSOM. */
+
+/* `hidden` must beat the skins' display:flex on tabs, chips and buttons */
+.rn-tabstrip[hidden],
+.rn-tabstrip [hidden],
+.rn-bookmarkbar[hidden],
+.rn-bookmarkbar [hidden] { display: none !important; }
+
+.rn-tabstrip__tabs { position: relative; }
+
+/* Tab widths. `.rn-tab` has inline-size containment (for its close-button container query), so its intrinsic width
+   is 0 and the scroller would size itself to every tab's min-width. An explicit width clamped by each skin's
+   max-width gives the scroller the right intrinsic size; tabs then shrink toward min-width before overflowing. */
+.rn-tabstrip .rn-tab { width: 100vw; }
+/* Pinned tabs are icon-only and fixed (DESIGN 3.3: 36 / 36 / 40). The skins' nested `.rn-tab` min/max-width
+   rules out-rank the base pinned rule, so restate it here. */
+.rn-tabstrip .rn-tab.rn-tab--pinned { flex: 0 0 36px; width: 36px; min-width: 36px; max-width: 36px; }
+:root[data-skin="y2001"] .rn-tabstrip .rn-tab.rn-tab--pinned { flex-basis: 40px; width: 40px; min-width: 40px; max-width: 40px; }
+.rn-tabstrip__tabs:focus-within { scroll-padding-inline: 24px; }
+
+/* the drop indicator is positioned with a transform from the scroller's left edge */
+.rn-tabstrip__drop { left: 0; z-index: 4; }
+
+/* drag: neighbours slide out of the way (DESIGN 6.2: transform 150ms ease-out; reduced motion: instant) */
+.rn-tabstrip--dragging .rn-tabstrip__tabs > :is(.rn-tab, .rn-group-chip):not(.rn-tab--dragging) {
+  transition: transform 150ms var(--rn-ease-out);
+}
+.rn-tabstrip--dragging .rn-tab--dragging { transition: none; }
+.rn-tabstrip--dragging,
+.rn-tabstrip--dragging * { cursor: default; }
+.rn-tabstrip--settling .rn-tabstrip__tabs > * { transition: none !important; }
+:root[data-reduced-motion="true"] .rn-tabstrip--dragging .rn-tabstrip__tabs > * { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rn-tabstrip--dragging .rn-tabstrip__tabs > * { transition: none; }
+}
+
+/* the strip never shows text selection or native image drags */
+.rn-tab img, .rn-bookmarkbar img { -webkit-user-drag: none; user-select: none; }
+
+/* group chip label truncates inside its 160px max */
+.rn-group-chip__name { min-width: 0; }
+
+/* ---------- bookmark bar ---------- */
+.rn-bookmarkbar__items {
+  display: flex;
+  align-items: center;
+  gap: var(--rn-space-1);
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.rn-bookmarkbar__item { min-width: 32px; cursor: default; }
+.rn-bookmarkbar__favicon { flex: none; width: 16px; height: 16px; object-fit: contain; }
+.rn-bookmarkbar__empty { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* "Links" label is the 2001 links bar; the older skins show items only (DESIGN 2.1-2.3) */
+:root:not([data-skin="y2001"]) .rn-bookmarkbar__label { display: none; }
+
+/* 2001 icons are full-colour art; on a group chip the chevron must follow the chip's label colour
+   (white on dark fills, near-black on yellow/cyan/orange) to stay visible. */
+:root[data-skin="y2001"] .rn-group-chip .rn-icon { filter: brightness(0) invert(1); }
+:root[data-skin="y2001"] .rn-group-chip:is([data-color="yellow"], [data-color="cyan"], [data-color="orange"]) .rn-icon { filter: brightness(0); }
+.rn-bookmarkbar__more { flex: none; min-width: 24px; padding-inline: var(--rn-space-2); }
+/* bar items keep their natural width (titles truncate at the skin's max-width); overflow goes to the » menu */
+.rn-bookmarkbar__items > .rn-bookmarkbar__item { flex: none; }
+.rn-bookmarkbar__items > [data-clipped] { visibility: hidden; }
+
+/* Link/text dropped on the strip (Q9): the tab that will load it is outlined in the skin accent; between tabs the
+   reorder drop indicator (.rn-tabstrip__drop, skin-coloured) marks where a new tab goes. */
+.rn-tabstrip .rn-tab.rn-tab--drop-target { outline: 2px solid var(--rn-accent); outline-offset: -2px; }

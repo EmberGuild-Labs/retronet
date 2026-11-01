@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <linearGradient id="rn-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B2160"/><stop offset="1" stop-color="#120D33"/></linearGradient>
+  <linearGradient id="rn-strip" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#24438C"/><stop offset="1" stop-color="#3B6FD6"/></linearGradient>
+  <linearGradient id="rn-sky" gradientUnits="userSpaceOnUse" x1="0" y1="344" x2="0" y2="720"><stop offset="0" stop-color="#1B1446"/><stop offset=".55" stop-color="#B33A7A"/><stop offset="1" stop-color="#F08A24"/></linearGradient>
+  <filter id="rn-shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000" flood-opacity=".3"/></filter>
+  <clipPath id="rn-view"><rect x="244" y="344" width="536" height="376"/></clipPath>
+  <mask id="rn-cuts" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><rect width="1024" height="1024" fill="#fff"/><rect x="0" y="668" width="1024" height="12" fill="#000"/><rect x="0" y="700" width="1024" height="16" fill="#000"/></mask>
+</defs>
+<rect x="100" y="100" width="824" height="824" rx="185" fill="url(#rn-body)" filter="url(#rn-shadow)"/>
+<g shape-rendering="crispEdges">
+  <rect x="212" y="232" width="600" height="520" fill="#0B0820"/>
+  <rect x="218" y="238" width="588" height="508" fill="#FFFFFF"/>
+  <path fill="#5E636C" d="M806 238V746H218L230 734H794V250Z"/>
+  <rect x="230" y="250" width="564" height="484" fill="#C9CCD2"/>
+  <rect x="236" y="256" width="552" height="64" fill="url(#rn-strip)"/>
+  <rect x="260" y="280" width="144" height="16" fill="#E9EBEE"/>
+  <rect x="732" y="268" width="40" height="40" fill="#FFFFFF"/>
+  <path fill="#5E636C" d="M772 268V308H732L736 304H768V272Z"/>
+  <rect x="736" y="272" width="32" height="32" fill="#C9CCD2"/>
+  <rect x="236" y="336" width="552" height="392" fill="#5E636C"/>
+  <path fill="#FFFFFF" d="M788 336V728H236L244 720H780V344Z"/>
+  <rect x="244" y="344" width="536" height="376" fill="url(#rn-sky)"/>
+  <g clip-path="url(#rn-view)"><path fill="#F3E6C8" fill-opacity="1" d="M296 608h24v24h-24zM704 608h24v24h-24zM296 584h24v24h-24zM320 584h24v24h-24zM680 584h24v24h-24zM704 584h24v24h-24zM320 560h24v24h-24zM344 560h24v24h-24zM656 560h24v24h-24zM680 560h24v24h-24zM344 536h24v24h-24zM368 536h24v24h-24zM632 536h24v24h-24zM656 536h24v24h-24zM368 512h24v24h-24zM392 512h24v24h-24zM416 512h24v24h-24zM584 512h24v24h-24zM608 512h24v24h-24zM632 512h24v24h-24zM416 488h24v24h-24zM440 488h24v24h-24zM464 488h24v24h-24zM488 488h24v24h-24zM512 488h24v24h-24zM536 488h24v24h-24zM560 488h24v24h-24zM584 488h24v24h-24z"/><path fill="#F3E6C8" fill-opacity="0.75" d="M224 584h24v24h-24zM248 584h24v24h-24zM752 584h24v24h-24zM776 584h24v24h-24zM248 560h24v24h-24zM752 560h24v24h-24zM272 536h24v24h-24zM728 536h24v24h-24zM272 512h24v24h-24zM296 512h24v24h-24zM704 512h24v24h-24zM728 512h24v24h-24zM296 488h24v24h-24zM320 488h24v24h-24zM680 488h24v24h-24zM704 488h24v24h-24zM344 464h24v24h-24zM368 464h24v24h-24zM632 464h24v24h-24zM656 464h24v24h-24zM368 440h24v24h-24zM392 440h24v24h-24zM416 440h24v24h-24zM584 440h24v24h-24zM608 440h24v24h-24zM632 440h24v24h-24zM440 416h24v24h-24zM464 416h24v24h-24zM488 416h24v24h-24zM512 416h24v24h-24zM536 416h24v24h-24zM560 416h24v24h-24z"/><path fill="#F3E6C8" fill-opacity="0.5" d="M176 560h24v24h-24zM824 560h24v24h-24zM176 536h24v24h-24zM200 536h24v24h-24zM800 536h24v24h-24zM824 536h24v24h-24zM200 512h24v24h-24zM800 512h24v24h-24zM224 488h24v24h-24zM776 488h24v24h-24zM248 464h24v24h-24zM752 464h24v24h-24zM272 440h24v24h-24zM728 440h24v24h-24zM296 416h24v24h-24zM320 416h24v24h-24zM680 416h24v24h-24zM704 416h24v24h-24zM320 392h24v24h-24zM344 392h24v24h-24zM368 392h24v24h-24zM632 392h24v24h-24zM656 392h24v24h-24zM680 392h24v24h-24zM392 368h24v24h-24zM416 368h24v24h-24zM440 368h24v24h-24zM464 368h24v24h-24zM488 368h24v24h-24zM512 368h24v24h-24zM536 368h24v24h-24zM560 368h24v24h-24zM584 368h24v24h-24zM608 368h24v24h-24z"/><g mask="url(#rn-cuts)"><rect x="344" y="704" width="336" height="24" fill="#FFB000"/><rect x="344" y="680" width="336" height="24" fill="#FFB000"/><rect x="344" y="656" width="336" height="24" fill="#FFB000"/><rect x="368" y="632" width="288" height="24" fill="#FFD24A"/><rect x="392" y="608" width="240" height="24" fill="#FFD24A"/><rect x="416" y="584" width="192" height="24" fill="#FFD24A"/><rect x="440" y="560" width="144" height="24" fill="#FFD24A"/></g></g>
+  <rect x="236" y="720" width="552" height="8" fill="#0B0820"/>
+</g></svg>

@@ -1,0 +1,18 @@
+/* downloads page-local layout (T22). Materials come from the skin (.rn-panel, .rn-progress, .rn-download). */
+.rn-downloads { list-style: none; margin: 0; padding: 0; }
+.rn-download { row-gap: var(--rn-space-1); }
+.rn-download > .rn-icon { align-self: start; margin-top: 2px; }
+.rn-download__info { min-width: 0; display: grid; gap: var(--rn-space-1); }
+.rn-download__source { font: var(--rn-font-ui); font-weight: 400; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rn-download .rn-progress { grid-column: 2 / -1; }
+.rn-download__actions { align-self: start; }
+.rn-download[data-state="cancelled"] .rn-download__name,
+.rn-download[data-state="missing"] .rn-download__name { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--rn-fg-muted); }
+.rn-downloads__notice:empty { display: none; }
+.rn-downloads__notice { margin: 0 0 var(--rn-space-5); color: var(--rn-fg); }
+.rn-empty__title { font-weight: 700; color: var(--rn-fg); }
+.rn-empty p { margin: 0 0 var(--rn-space-2); }
+@media (max-width: 640px) {
+  .rn-download { grid-template-columns: auto minmax(0, 1fr); }
+  .rn-download__actions { grid-column: 2; justify-content: flex-start; margin-top: var(--rn-space-2); }
+}

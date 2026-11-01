@@ -1,0 +1,56 @@
+/* RetroNet skin y1997 "1997 Comet": internal pages (T9, DESIGN 5). Loads this skin's skin.css (tokens, buttons,
+   inputs, icons) and the shared page base, then adds the 1997 page material: gray page, white sunken panels,
+   raised/sunken inset tables, Pixelify headings in navy, starfield tile on the new tab. */
+@layer rn-base, rn-skin;
+@import url("skin.css");
+@import url("../base/pages.css") layer(rn-base);
+
+@layer rn-skin {
+:root[data-skin="y1997"] {
+  --rn-font-heading: 700 21px/1.2 var(--rn-stack-pixel2);
+  --rn-heading-fg: #000080;
+  --rn-fs-h1: 28px; --rn-fs-h2: 21px;
+
+  & body.rn-tiled { background: #0B1A4A url("../../img/tile-starfield.svg") repeat; background-size: 64px 64px; image-rendering: pixelated; }
+  &[data-incognito="true"] body.rn-tiled { background: var(--rn-incognito-bg); }
+  & body.rn-tiled .rn-page { margin-block: 24px; background: var(--rn-bg-page); box-shadow: 0 0 0 1px #000000, var(--rn-bevel-raised); image-rendering: auto; }
+  &[data-incognito="true"] .rn-page { box-shadow: 0 0 0 1px #000000, var(--rn-bevel-raised); }
+
+  & .rn-page h1, & .rn-page h2 { -webkit-font-smoothing: antialiased; }
+  & .rn-panel { box-shadow: var(--rn-bevel-field); padding: 14px 16px; }
+  & .rn-panel--raised { background: var(--rn-bg-page); box-shadow: var(--rn-bevel-raised); }
+  & .rn-hr { box-shadow: var(--rn-bevel-etched); }
+
+  /* border=2 style tables: raised frame, sunken white cells */
+  & .rn-table { padding: 2px; border-spacing: 2px; background: var(--rn-bg-page); box-shadow: var(--rn-bevel-raised); }
+  & .rn-table th { background: var(--rn-bg-page); box-shadow: var(--rn-bevel-thin-up); }
+  & .rn-table td { background: var(--rn-bg-input); box-shadow: var(--rn-bevel-thin-down); }
+
+  & .rn-tile { background: var(--rn-bg-toolbar); box-shadow: var(--rn-bevel-raised); }
+  & .rn-tile:active { box-shadow: var(--rn-bevel-sunken); }
+  & .rn-tile:active > * { translate: 1px 1px; }
+  & .rn-tile:focus-visible { outline: 2px solid var(--rn-focus-ring); outline-offset: -5px; }
+  & .rn-tile--empty { background: transparent; box-shadow: none; }
+
+  & .rn-guestbook-entry { padding: 2px; background: var(--rn-bg-page); box-shadow: var(--rn-bevel-raised); gap: 2px; }
+  & .rn-guestbook-entry__visitor, & .rn-guestbook-entry__meta, & .rn-guestbook-entry__body { background: var(--rn-bg-input); box-shadow: var(--rn-bevel-thin-down); }
+  & .rn-guestbook-entry__label { color: #000080; }
+
+  & .rn-marquee { padding: 4px 6px; background: #000080; color: #FFFF66; box-shadow: var(--rn-bevel-field); font: 400 20px/1 var(--rn-stack-pixel); -webkit-font-smoothing: none; }
+  & .rn-marquee .rn-btn { flex: none; }
+
+  & .rn-progress { box-shadow: var(--rn-bevel-field); padding: 3px; height: 16px; }
+  & .rn-radio-card { background: var(--rn-bg-page); box-shadow: var(--rn-bevel-raised); }
+  & .rn-radio-card img { box-shadow: 0 0 0 1px #000000; }
+  & .rn-radio-card:has(input:checked) { outline: 2px solid var(--rn-accent); outline-offset: -6px; box-shadow: var(--rn-bevel-sunken); }
+  & .rn-settings__nav { padding: 2px; background: var(--rn-bg-input); box-shadow: var(--rn-bevel-field); }
+  & fieldset.rn-fieldset { box-shadow: var(--rn-bevel-etched); }
+  & .rn-tree { padding: 2px; background: var(--rn-bg-input); box-shadow: var(--rn-bevel-field); }
+  & .rn-kbd { background: var(--rn-bg-page); }
+
+  /* certificate warning: hazard band over a gray dialog panel */
+  & .rn-alert { position: relative; padding: 22px 20px 20px; background: var(--rn-bg-page); box-shadow: 0 0 0 1px #000000, var(--rn-bevel-raised); }
+  & .rn-alert--danger::before { content: ""; position: absolute; left: 2px; right: 2px; top: 2px; height: 6px; background: repeating-linear-gradient(135deg, #FFFF00 0 8px, #000000 8px 16px); }
+  & .rn-alert h1 { color: #000000; }
+}
+}

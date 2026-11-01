@@ -1,0 +1,57 @@
+/* retronet://newtab layout (T21). Unlayered, so it beats the skin's @layer rules: position and size only.
+   Colours, bevels and fonts come from skins/<id>/pages.css (T9). */
+
+.rn-newtab { max-width: 760px; }
+
+.rn-newtab__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0 24px;
+}
+.rn-newtab__mark { width: 64px; height: 64px; flex: none; }
+/* 39x8 pixel wordmark at x3: integer multiple only */
+.rn-newtab__wordmark { width: 117px; height: 24px; image-rendering: pixelated; flex: none; }
+
+.rn-newtab__incognito p { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rn-newtab__incognito p:last-child { display: block; }
+
+.rn-newtab .rn-search { margin-bottom: 4px; }
+.rn-newtab .rn-search .rn-input { min-width: 0; }
+.rn-newtab__engine { margin: 0; font-size: 12px; }
+.rn-newtab__error { margin: 4px 0 0; font-size: 12px; min-height: 0; }
+.rn-newtab__error:empty { margin: 0; } /* stays in the a11y tree so the first message is announced */
+
+.rn-newtab .rn-tiles { margin-top: 20px; }
+.rn-newtab .rn-tile { min-width: 0; }
+.rn-newtab li.rn-tile--empty { padding: 16px; }
+
+.rn-newtab__footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 16px;
+  margin-top: 32px;
+}
+.rn-newtab__footer .rn-odometer { justify-self: start; align-items: flex-start; } /* caption and well share one left edge */
+.rn-newtab__badge { justify-self: center; display: inline-block; line-height: 0; }
+.rn-newtab__guestbook { justify-self: end; padding-block: 4px; white-space: nowrap; }
+@media (max-width: 600px) {
+  .rn-newtab__footer { grid-template-columns: 1fr; justify-items: center; }
+  .rn-newtab__footer > * { justify-self: center !important; }
+}
+
+/* Odometer: each cell holds a 0-9 strip; data-d picks the visible line, the skin's transition rolls it. */
+.rn-odometer__strip > span { display: block; height: 28px; }
+.rn-odometer__digit[data-d="1"] > .rn-odometer__strip { translate: 0 -28px; }
+.rn-odometer__digit[data-d="2"] > .rn-odometer__strip { translate: 0 -56px; }
+.rn-odometer__digit[data-d="3"] > .rn-odometer__strip { translate: 0 -84px; }
+.rn-odometer__digit[data-d="4"] > .rn-odometer__strip { translate: 0 -112px; }
+.rn-odometer__digit[data-d="5"] > .rn-odometer__strip { translate: 0 -140px; }
+.rn-odometer__digit[data-d="6"] > .rn-odometer__strip { translate: 0 -168px; }
+.rn-odometer__digit[data-d="7"] > .rn-odometer__strip { translate: 0 -196px; }
+.rn-odometer__digit[data-d="8"] > .rn-odometer__strip { translate: 0 -224px; }
+.rn-odometer__digit[data-d="9"] > .rn-odometer__strip { translate: 0 -252px; }
+/* the mid-line sits above the strip */
+.rn-odometer__digit::after { z-index: 1; }

@@ -1,0 +1,12 @@
+/* neterror page-local layout (T22). */
+.rn-alert__text { min-width: 0; flex: 1 1 auto; }
+.rn-alert__head > .rn-icon { margin-top: 4px; }
+.rn-neterror__url { overflow-wrap: anywhere; }
+.rn-neterror__status:empty { display: none; }
+.rn-neterror__status { margin-top: var(--rn-space-5); }
+/* Keep actions and the disclosure on the text column, next to the 48px icon (48 + 12 gap). */
+.rn-alert > :is(.rn-alert__actions, .rn-details, [role="status"]) { padding-inline-start: 60px; }
+@media (max-width: 560px) {
+  .rn-alert__head { flex-direction: column; }
+  .rn-alert > :is(.rn-alert__actions, .rn-details, [role="status"]) { padding-inline-start: 0; }
+}

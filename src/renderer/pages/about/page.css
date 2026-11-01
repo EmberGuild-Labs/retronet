@@ -1,0 +1,23 @@
+/* retronet://about layout (T21). Unlayered: position and size only. */
+
+.rn-about__hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 8px 0 32px;
+}
+.rn-about__mark { width: 128px; height: 128px; flex: none; }
+.rn-about__id { min-width: 0; }
+.rn-about__id h1 { margin: 0 0 12px; line-height: 0; }
+/* 39x8 pixel wordmark at x4 */
+.rn-about__wordmark { width: 156px; height: 32px; image-rendering: pixelated; }
+.rn-about__version { margin: 0 0 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rn-about__engine { margin: 0; font-variant-numeric: tabular-nums; }
+.rn-about__badge { line-height: 0; }
+.rn-about code { overflow-wrap: anywhere; user-select: all; }
+.rn-about .rn-details { margin: 0; }
+.rn-about__links { text-align: center; }
+
+@media (max-width: 600px) {
+  .rn-about__hero { flex-direction: column; text-align: center; }
+}

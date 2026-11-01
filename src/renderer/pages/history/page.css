@@ -1,0 +1,46 @@
+/* retronet://history (guestbook) layout (T21). Unlayered: position and size only; material comes from the skin. */
+
+.rn-history__toolbar { margin-bottom: 4px; }
+.rn-history__toolbar .rn-input { min-width: 0; }
+.rn-history__status { margin: 0 0 8px; min-height: 1.4em; font-size: 12px; }
+
+.rn-history__status:empty { min-height: 0; margin: 0; }
+.rn-history__list > .rn-day:first-child { margin-top: 16px; }
+.rn-history__list .rn-day > h2 { margin-top: 0; }
+.rn-history__list .rn-empty p { margin: 0; }
+
+/* Entry title can be long: one line with an ellipsis, full text in the title attribute. */
+.rn-guestbook-entry__title { min-width: 0; display: block; }
+.rn-guestbook-entry__visitor { min-width: 0; }
+.rn-guestbook-entry__meta time { white-space: nowrap; }
+
+.rn-history__more { display: flex; justify-content: center; margin: 24px 0 8px; }
+.rn-history__more .rn-btn[hidden] { display: none; }
+
+/* The Pause control has nothing to pause when motion is reduced (the marquee is static then). */
+@media (prefers-reduced-motion: reduce) { .rn-history__pause { display: none; } }
+:root[data-reduced-motion="true"] .rn-history__pause { display: none; }
+.rn-marquee .rn-btn { flex: none; }
+
+/* Native modal <dialog> carrying the skin's .rn-dialog material. */
+dialog.rn-history__dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  padding: 0;
+  border: 0;
+  overscroll-behavior: contain;
+}
+dialog.rn-history__dialog:not([open]) { display: none; }
+dialog.rn-history__dialog::backdrop { background: var(--rn-scrim, rgba(0, 0, 0, 0.35)); }
+.rn-history__dialog .rn-dialog__body p { margin: 0; }
+
+@media (max-width: 600px) {
+  .rn-guestbook-entry__body { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Paused via the button: show the whole sentence, static and centred (same frame as reduced motion), instead of
+   freezing wherever the scroll happened to be (often a blank strip). Hover/focus pauses keep their position. */
+.rn-marquee[data-paused="true"] .rn-marquee__track { animation: none; padding-inline-start: 0; }
+.rn-marquee[data-paused="true"] .rn-marquee__viewport { text-align: center; }

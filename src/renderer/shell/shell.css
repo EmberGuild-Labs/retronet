@@ -1,0 +1,83 @@
+/* Shell feature CSS (T17). Unlayered, so it beats the skin layers: per T9's rule it only positions, sizes and
+   shows/hides things. Colours, bevels and fonts stay in skins/<id>/skin.css. No inline styles (CSP). */
+
+html, body { height: 100%; overflow: hidden; }
+
+/* Everything above the tab view, measured as one block for layout.setInsets. */
+.rn-shell__top { display: flex; flex-direction: column; flex: none; }
+
+/* Popup windows (D4): a plain drag strip that keeps the window-control inset, title centred in what's left. */
+.rn-shell__popup-strip { align-items: center; }
+.rn-shell__popup-title {
+  flex: 1 1 auto; min-width: 0; padding-inline: var(--rn-space-4);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center;
+}
+
+/* Location row: the 1997 "Bookmarks" quick-file button is 22px tall (DESIGN 2.2); Go stays its skin size. */
+.rn-locationbar__bookmarks { flex: none; height: 22px; }
+.rn-locationbar .rn-btn--go { flex: none; }
+
+/* Status bar panes per skin (DESIGN 2.1-2.3): 1994 has no lamp; only 2001 shows the profile pane. */
+:root[data-skin="y1994"] .rn-statusbar__security { display: none; }
+:root:not([data-skin="y2001"]) .rn-statusbar__profile { display: none; }
+.rn-statusbar__zoompane { padding: 0; }
+.rn-statusbar__zoom { height: 100%; padding: 0 var(--rn-space-3); }
+/* zoom button hit area: at least 24px wide even for "90%" */
+.rn-statusbar__zoom { min-width: 48px; }
+
+/* Load meter shows the phase (there is no byte progress for page loads). Data, so no transition (DESIGN 6.2). */
+.rn-statusbar__progress .rn-progress__fill { width: 10%; }
+.rn-statusbar__progress[data-phase="contacting"] .rn-progress__fill { width: 20%; }
+.rn-statusbar__progress[data-phase="waiting"] .rn-progress__fill { width: 40%; }
+.rn-statusbar__progress[data-phase="transferring"] .rn-progress__fill { width: 70%; }
+
+/* 1997 segmented meter: snap the fill to whole 10px blocks so no half-block shows. */
+:root[data-skin="y1997"] .rn-statusbar__progress .rn-progress__fill { width: 10px; }
+:root[data-skin="y1997"] .rn-statusbar__progress[data-phase="contacting"] .rn-progress__fill { width: 20px; }
+:root[data-skin="y1997"] .rn-statusbar__progress[data-phase="waiting"] .rn-progress__fill { width: 40px; }
+:root[data-skin="y1997"] .rn-statusbar__progress[data-phase="transferring"] .rn-progress__fill { width: 80px; }
+
+/* Small screens: below ~760px, 1997's big buttons would push the throbber off; labels stay, Downloads goes. */
+@media (max-width: 760px) {
+  :root[data-skin="y1997"] .rn-toolbar [data-action="downloads"] { display: none; }
+}
+
+/* Omnibox text box (D11): the input plus an aria-hidden twin that draws the URL with the host emphasised and the
+   scheme/port/path dimmed while the field is not focused. The twin must sit on the input's exact text box, so it
+   repeats the input's font and padding (base/skin.css .rn-omnibox__input + the per-skin tweaks below). Editing
+   (focus) shows the plain input text. */
+.rn-omnibox__text { position: relative; display: flex; flex: 1 1 auto; min-width: 0; height: 100%; }
+.rn-omnibox__text > .rn-omnibox__input { width: 100%; }
+.rn-omnibox__display {
+  position: absolute; inset: 0;
+  display: none; align-items: center;
+  padding: 0 var(--rn-space-2);
+  font: var(--rn-font-address);
+  color: var(--rn-field-fg);
+  pointer-events: none;
+  overflow: hidden;
+}
+.rn-omnibox__display-line { min-width: 0; overflow: hidden; white-space: pre; text-overflow: ellipsis; }
+.rn-omnibox__dim { color: var(--rn-field-muted); }
+/* --rn-field-muted is within ~1.5:1 of --rn-field-fg in the skins, too close for the host to stand out; ease it
+   15% toward the field background (still >= 5:1 on every skin's field, WCAG AA). */
+.rn-omnibox__dim { color: color-mix(in srgb, var(--rn-field-muted) 85%, var(--rn-bg-input)); }
+.rn-omnibox__host { color: var(--rn-field-fg); }
+@media (forced-colors: none) { .rn-omnibox--emphasis .rn-omnibox__input:not(:focus) { color: transparent; } }
+.rn-omnibox--emphasis .rn-omnibox__input:not(:focus) + .rn-omnibox__display { display: flex; }
+:root:is([data-skin="y1994"], [data-skin="y1997"]) .rn-omnibox__display { -webkit-font-smoothing: none; }
+:root[data-skin="y2001"] .rn-omnibox__display { padding-top: 1px; }
+
+/* Inline omnibox error (Q7), between the text and the star; the field keeps its text so it can be fixed. */
+.rn-omnibox__error {
+  flex: 0 1 auto; min-width: 0; max-width: 45%; padding: 0 var(--rn-space-2);
+  color: var(--rn-field-danger); font: var(--rn-font-ui); font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The input text keeps a floor so the error can never squeeze it to nothing (D15). */
+.rn-omnibox__text { min-width: 6em; }
+.rn-omnibox__error[hidden] { display: none; }
+/* Forced colors repaint the input's transparent text, so the twin would double it: show the plain input only. */
+@media (forced-colors: active) {
+  .rn-omnibox--emphasis .rn-omnibox__input:not(:focus) + .rn-omnibox__display { display: none; }
+}

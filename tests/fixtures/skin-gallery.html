@@ -1,0 +1,351 @@
+<!doctype html>
+<!--
+  RetroNet skin gallery (T9). Dev/test fixture only: never shipped, never served over retronet://.
+  Serve the repo root over HTTP (mask-image needs a real origin), e.g.
+    python3 -m http.server 8765    then open
+    http://localhost:8765/tests/fixtures/skin-gallery.html?skin=y1997
+  Query: skin=y1994|y1997|y2001  incognito=1  reduced=1  surface=shell|page  page=newtab|history|settings|downloads|bookmarks|certerror|neterror
+         loading=1 (throbber + tab spinner)  platform=darwin|win32
+  The bar at the top switches skins live (same swap as src/renderer/common/skin-loader.ts) without reloading.
+-->
+<html lang="en" data-skin="y1997" data-incognito="false" data-reduced-motion="false" data-platform="darwin" data-surface="shell">
+<head>
+<meta charset="utf-8">
+<title>RetroNet skin gallery</title>
+<link id="rn-skin" rel="stylesheet" href="../../src/renderer/public/skins/y1997/skin.css">
+<style>
+  /* harness-only styles (not part of any skin) */
+  .gx-bar { display: flex; gap: 8px; align-items: center; padding: 6px 10px; background: #222; color: #eee; font: 12px/1.2 system-ui, sans-serif; }
+  .gx-bar button, .gx-bar select { font: inherit; padding: 2px 8px; color: #000; background: #ddd; border: 1px solid #888; }
+  .gx-bar label { display: inline-flex; gap: 4px; align-items: center; }
+  .gx-section { padding: 16px; }
+  .gx-h { font: 700 11px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #666; margin: 0 0 8px; }
+  .gx-row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .gx-frame { width: 1180px; height: 560px; border: 1px solid #000; }
+  .gx-frame .rn-frame { height: 100%; }
+  .gx-frame iframe { border: 0; width: 100%; height: 100%; display: block; }
+  .gx-overlays { background: #8a8f99; }
+  .gx-scrimbox { position: relative; width: 460px; height: 250px; overflow: hidden; display: grid; place-items: center; background: #fff; }
+  .gx-scrimbox .rn-scrim { position: absolute; }
+  .gx-promptbox { position: relative; padding-top: 14px; }
+  :root[data-surface="page"] .gx-bar { display: none; }
+</style>
+</head>
+<body>
+<div class="gx-bar" id="gx-bar">
+  <strong>Skin gallery</strong>
+  <button data-skin="y1994">1994 Pioneer</button>
+  <button data-skin="y1997">1997 Comet</button>
+  <button data-skin="y2001">2001 Horizon</button>
+  <label><input type="checkbox" id="gx-incog"> incognito</label>
+  <label><input type="checkbox" id="gx-reduced"> reduced motion</label>
+  <label><input type="checkbox" id="gx-loading"> loading</label>
+  <label>page <select id="gx-page"><option>newtab</option><option>history</option><option>settings</option><option>downloads</option><option>bookmarks</option><option>certerror</option><option>neterror</option></select></label>
+</div>
+<div id="gx-root"></div>
+
+<script type="module">
+const BASE = '../../src/renderer/public/'
+const q = new URLSearchParams(location.search)
+const root = document.documentElement
+const surface = q.get('surface') === 'page' ? 'page' : 'shell'
+root.dataset.surface = surface
+root.dataset.platform = q.get('platform') || 'darwin'
+root.dataset.incognito = q.get('incognito') === '1' ? 'true' : 'false'
+root.dataset.reducedMotion = q.get('reduced') === '1' ? 'true' : 'false'
+let loading = q.get('loading') === '1'
+let pageName = q.get('page') || 'newtab'
+
+// ---- mirror of skin-loader.applySkin (kept in step by hand; the TS module is the source of truth) ----
+let gen = 0
+function applySkin(id) {
+  const href = `${BASE}skins/${id}/${surface === 'page' ? 'pages' : 'skin'}.css`
+  const old = document.getElementById('rn-skin')
+  if (old && old.getAttribute('href') === href && root.dataset.skin === id && old.sheet) return Promise.resolve()
+  const mine = ++gen
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'; link.href = href
+  return new Promise((resolve) => {
+    const finish = () => {
+      if (mine !== gen) { link.remove(); return resolve() }
+      root.setAttribute('data-skin-switching', '')
+      root.dataset.skin = id
+      document.querySelectorAll('link#rn-skin').forEach((el) => el !== link && el.remove())
+      link.id = 'rn-skin'
+      void root.offsetHeight
+      requestAnimationFrame(() => mine === gen && root.removeAttribute('data-skin-switching'))
+      resolve(); render()
+    }
+    link.addEventListener('load', finish, { once: true }); link.addEventListener('error', finish, { once: true })
+    old ? old.after(link) : document.head.append(link)
+  })
+}
+window.applySkin = applySkin
+window.applyFlags = (f) => { for (const [k, v] of Object.entries(f)) root.setAttribute('data-' + k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase()), String(v)); render() }
+
+// ---- tiny DOM helper (same idea as common/dom.ts h()) ----
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag)
+  for (const [k, v] of Object.entries(props)) {
+    if (v === false || v == null) continue
+    if (k === 'class') el.className = v
+    else if (k === 'text') el.textContent = v
+    else if (k === 'on') for (const [t, fn] of Object.entries(v)) el.addEventListener(t, fn)
+    else el.setAttribute(k, v === true ? '' : v)
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c)
+  return el
+}
+const icon = (name, size) => h('span', { class: 'rn-icon', 'data-icon': name, 'data-size': size, 'aria-hidden': 'true' })
+const btn = (cls, label, iconName, extra = {}) => h('button', { class: 'rn-btn ' + cls, type: 'button', ...extra }, iconName && icon(iconName), label && h('span', { class: 'rn-btn__label', text: label }))
+const iconBtn = (name, label, extra = {}) => h('button', { class: 'rn-btn rn-btn--icon', type: 'button', 'aria-label': label, title: label, ...extra }, icon(name))
+
+// ---- shell ----
+function tab({ title, active, pinned, loadingTab, group, groupLast, audible, muted, fav = 'globe' }) {
+  const cls = ['rn-tab', active && 'rn-tab--active', pinned && 'rn-tab--pinned', loadingTab && 'rn-tab--loading', groupLast && 'rn-tab--group-last', audible && 'rn-tab--audible', muted && 'rn-tab--muted'].filter(Boolean).join(' ')
+  return h('div', { class: cls, role: 'tab', 'aria-selected': active ? 'true' : 'false', tabindex: active ? '0' : '-1', 'data-group-color': group, title },
+    loadingTab ? h('span', { class: 'rn-tab__favicon rn-icon', 'data-icon': 'loading', 'aria-hidden': 'true' }) : h('span', { class: 'rn-tab__favicon rn-icon', 'data-icon': fav, 'aria-hidden': 'true' }),
+    h('span', { class: 'rn-tab__title', text: title }),
+    (audible || muted) && h('button', { class: 'rn-tab__audio', type: 'button', 'aria-label': muted ? 'Unmute tab' : 'Mute tab' }, icon(muted ? 'muted' : 'audio')),
+    h('button', { class: 'rn-tab__close', type: 'button', 'aria-label': 'Close tab', tabindex: '-1' }, icon('close')))
+}
+function chip(name, color, count, collapsed) {
+  return h('button', { class: 'rn-group-chip' + (collapsed ? ' rn-group-chip--collapsed' : ''), type: 'button', 'data-color': color, 'aria-expanded': collapsed ? 'false' : 'true', 'aria-label': `Group ${name || 'unnamed'}, ${color}, ${count} tabs` },
+    icon(collapsed ? 'chevron-right' : 'chevron-down'),
+    name ? h('span', { text: name }) : h('span', { class: 'rn-group-chip__swatch' }),
+    (collapsed || !name) && h('span', { class: 'rn-group-chip__count', text: `(${count})` }))
+}
+function tabstrip() {
+  return h('div', { class: 'rn-tabstrip' },
+    h('div', { class: 'rn-titlebar-spacer' }),
+    h('div', { class: 'rn-tabstrip__tabs', role: 'tablist', 'aria-label': 'Tabs' },
+      tab({ title: 'Pinned mail', pinned: true, fav: 'page', audible: true }),
+      tab({ title: 'The Daily Pixel - front page', active: true, fav: 'page' }),
+      tab({ title: 'Loading example.org', loadingTab: loading }),
+      chip('Research', 'blue', 2),
+      tab({ title: 'Grouped tab one', group: 'blue' }),
+      tab({ title: 'Grouped tab two, a longer title', group: 'blue', groupLast: true, audible: true }),
+      chip('Shopping', 'yellow', 3, true),
+      chip('', 'red', 1),
+      tab({ title: 'Unnamed group tab', group: 'red', groupLast: true, muted: true }),
+      tab({ title: 'Plain tab' })),
+    h('button', { class: 'rn-btn rn-btn--icon rn-tabstrip__new', type: 'button', 'aria-label': 'New tab', title: 'New tab' }, icon('newtab')),
+    h('div', { class: 'rn-tabstrip__fill' }),
+    h('button', { class: 'rn-btn rn-tabstrip__scroll', type: 'button', 'aria-label': 'Scroll tabs left' }, icon('chevron-left')),
+    h('button', { class: 'rn-btn rn-tabstrip__scroll', type: 'button', 'aria-label': 'Scroll tabs right' }, icon('chevron-right')),
+    h('span', { class: 'rn-incognito-badge' }, icon('incognito'), 'Incognito'))
+}
+function throbber() {
+  return h('div', { class: 'rn-throbber-well', 'aria-hidden': 'true' }, h('span', { class: 'rn-throbber', 'data-state': loading ? 'loading' : 'idle' }))
+}
+function toolbar(skin) {
+  const back = { disabled: false }, fwd = { disabled: true }, stop = { disabled: !loading }
+  const right = [h('div', { class: 'rn-toolbar__spacer' }),
+    h('button', { class: 'rn-btn rn-btn--icon rn-profile-btn', type: 'button', 'data-color': 'purple', 'aria-label': 'Profile: Work. Switch profile', title: 'Profile: Work' }, root.dataset.incognito === 'true' ? icon('incognito') : 'W'),
+    iconBtn('menu', 'Menu'), throbber()]
+  if (skin === 'y1997') {
+    return h('div', { class: 'rn-toolbar' },
+      btn('rn-btn--labeled', 'Back', 'back', back), btn('rn-btn--labeled', 'Forward', 'forward', fwd), btn('rn-btn--labeled', 'Reload', 'reload'),
+      btn('rn-btn--labeled', 'Home', 'home'), btn('rn-btn--labeled', 'Find', 'find'), btn('rn-btn--labeled', 'Saves', 'download'), btn('rn-btn--labeled', 'Stop', 'stop', stop), ...right)
+  }
+  if (skin === 'y2001') {
+    return h('div', { class: 'rn-toolbar' },
+      btn('rn-btn--round', 'Back', 'back', back), h('button', { class: 'rn-btn rn-btn--round', type: 'button', 'aria-label': 'Forward', disabled: true }, icon('forward')),
+      h('span', { class: 'rn-toolbar__sep' }),
+      iconBtn('reload', 'Reload'), iconBtn('home', 'Home'), iconBtn('find', 'Find'), iconBtn('download', 'Downloads'), iconBtn('stop', 'Stop', stop),
+      h('span', { class: 'rn-toolbar__sep' }), ...right)
+  }
+  return h('div', { class: 'rn-toolbar' },
+    btn('rn-btn--labeled', 'Back', 'back', back), btn('rn-btn--labeled', 'Forward', 'forward', fwd), btn('rn-btn--labeled', 'Reload', 'reload'),
+    btn('rn-btn--labeled', 'Home', 'home'), btn('rn-btn--labeled', 'Stop', 'stop', stop), btn('rn-btn--labeled', 'Find', 'find'), ...right)
+}
+function locationbar(skin) {
+  const label = { y1994: 'URL:', y1997: 'Location:', y2001: 'Address' }[skin]
+  return h('div', { class: 'rn-locationbar' },
+    skin === 'y1997' && h('button', { class: 'rn-btn', type: 'button', 'aria-haspopup': 'menu' }, icon('bookmark'), h('span', { class: 'rn-btn__label', text: 'Bookmarks' }), icon('chevron-down')),
+    h('label', { class: 'rn-omnibox__label', for: 'gx-omni', text: label }),
+    h('div', { class: 'rn-omnibox', 'data-security': 'secure' },
+      h('button', { class: 'rn-omnibox__security', type: 'button', 'aria-label': 'Secure connection' }, icon('lock')),
+      h('input', { class: 'rn-omnibox__input', id: 'gx-omni', role: 'combobox', 'aria-expanded': 'false', value: 'https://example.org/retro/index.html', placeholder: 'Search or enter address', spellcheck: 'false' }),
+      h('button', { class: 'rn-btn rn-btn--icon rn-omnibox__star', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Bookmark this page' }, icon('bookmark'))),
+    skin === 'y2001' && h('button', { class: 'rn-btn rn-btn--go', type: 'button' }, icon('go'), h('span', { class: 'rn-btn__label', text: 'Go' })))
+}
+function bookmarkbar(skin) {
+  const item = (t, i) => h('a', { class: 'rn-bookmarkbar__item', href: '#' }, icon(i), h('span', { text: t }))
+  return h('div', { class: 'rn-bookmarkbar', role: 'toolbar', 'aria-label': 'Bookmarks bar' },
+    skin === 'y2001' && h('span', { class: 'rn-bookmarkbar__label', text: 'Links' }),
+    h('button', { class: 'rn-bookmarkbar__item', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false' }, icon('folder'), h('span', { text: 'Cool sites' })),
+    item('Page one', 'page'), item('Webring hub', 'globe'), item('A very long bookmark title that should truncate nicely', 'page'))
+}
+function findbar(nomatch) {
+  return h('div', { class: 'rn-findbar' + (nomatch ? ' rn-findbar--nomatch' : ''), role: 'search' },
+    h('label', { for: 'gx-find' + (nomatch ? 'x' : ''), text: 'Find in page:' }),
+    h('input', { class: 'rn-input', id: 'gx-find' + (nomatch ? 'x' : ''), value: nomatch ? 'zzzq' : 'pixel' }),
+    h('span', { class: 'rn-findbar__count', 'aria-live': 'polite', text: nomatch ? 'No matches' : '3 of 12' }),
+    iconBtn('chevron-up', 'Previous match'), iconBtn('chevron-down', 'Next match'), iconBtn('close', 'Close find bar'))
+}
+function statusbar(error) {
+  return h('div', { class: 'rn-statusbar' },
+    h('div', { class: 'rn-statusbar__pane rn-statusbar__security', title: 'Secure connection' }, icon('lock')),
+    h('div', { class: 'rn-statusbar__pane rn-statusbar__text', 'data-error': error ? 'true' : 'false', text: error ? 'Error: host not found.' : loading ? 'Transferring data from example.org...' : 'Document: Done.' }),
+    h('div', { class: 'rn-statusbar__pane rn-statusbar__progress', hidden: !loading }, h('span', { class: 'rn-progress' }, h('span', { class: 'rn-progress__fill gx-p60' }))),
+    h('div', { class: 'rn-statusbar__pane' }, h('button', { class: 'rn-statusbar__zoom', type: 'button', 'aria-label': 'Zoom 110%, reset to 100%', text: '110%' })),
+    root.dataset.skin === 'y2001' && h('div', { class: 'rn-statusbar__pane rn-statusbar__profile', 'data-color': 'purple', text: 'Work' }))
+}
+
+// ---- overlays ----
+function dialog(title, body, actions, extraClass = '') {
+  return h('div', { class: 'rn-dialog ' + extraClass, role: 'dialog', 'aria-label': title },
+    h('h2', { class: 'rn-dialog__title', text: title }), h('div', { class: 'rn-dialog__body' }, body), actions && h('div', { class: 'rn-dialog__actions' }, actions))
+}
+function overlays() {
+  const kb = (...k) => k.map((x) => h('kbd', { class: 'rn-kbd', text: x }))
+  const item = (ic, label, kind, keys, sel) => h('li', { class: 'rn-palette__item' + (sel ? ' rn-palette__item--selected' : ''), role: 'option', 'aria-selected': sel ? 'true' : 'false' },
+    icon(ic), h('span', { class: 'rn-palette__label' }, ...label), kind && h('span', { class: 'rn-palette__kind', text: kind }), keys && h('span', {}, ...kb(...keys)))
+  const m = (t) => h('mark', { text: t })
+  const palette = dialog('Run a command', [
+    h('input', { class: 'rn-palette__input', 'aria-label': 'Command', placeholder: 'Type a command, tab, skin or profile', value: 'inc' }),
+    h('ul', { class: 'rn-palette__list', role: 'listbox' },
+      item('incognito', ['New ', m('inc'), 'ognito window'], null, ['⌘', '⇧', 'N'], true),
+      item('globe', ['Switch skin: 1997 Comet'], 'Skin'),
+      item('page', ['The Daily P', m('i'), 'xel'], 'Tab'),
+      item('profile', ['Work'], 'Profile'))], null, 'rn-palette')
+  const suggest = h('ul', { class: 'rn-suggest', role: 'listbox', 'aria-label': 'Suggestions' },
+    ...[['history', 'Retro webring', 'https://example.org/ring', true], ['bookmark', 'Pixel art gallery', 'https://pixels.example/'], ['search', 'retro fonts', 'Search with DuckDuckGo']].map(([i, t, u, s]) =>
+      h('li', { class: 'rn-suggest__item' + (s ? ' rn-suggest__item--selected' : ''), role: 'option' }, icon(i), h('span', { class: 'rn-suggest__title', text: t }), h('span', { class: 'rn-suggest__url', text: u }))))
+  const prompt = h('div', { class: 'rn-dialog rn-prompt', role: 'dialog', 'aria-label': 'Permission request' },
+    h('span', { class: 'rn-prompt__arrow' }),
+    h('div', { class: 'rn-prompt__head' }, icon('camera', '24'), h('p', {}, h('b', { text: 'example.org' }), ' wants to use your camera'), h('span', { class: 'rn-prompt__count', text: '1 of 2' }), iconBtn('close', 'Dismiss')),
+    h('div', { class: 'rn-dialog__body' }, h('label', { class: 'rn-check' }, h('input', { type: 'checkbox' }), 'Remember for this site')),
+    h('div', { class: 'rn-dialog__actions' }, btn('', 'Block'), btn('', 'Allow')))
+  const swatches = h('div', { class: 'rn-swatches', role: 'radiogroup', 'aria-label': 'Group colour' },
+    ...['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'].map((c) => h('button', { class: 'rn-swatch', type: 'button', role: 'radio', 'data-color': c, 'aria-checked': c === 'blue' ? 'true' : 'false', 'aria-label': c })))
+  const editor = dialog('Edit group', [
+    h('div', { class: 'rn-dialog__field' }, h('label', { for: 'gx-gname', text: 'Group name' }), h('input', { class: 'rn-input', id: 'gx-gname', value: 'Research' })), swatches],
+    [btn('', 'Ungroup'), btn('rn-btn--danger', 'Close group', 'trash'), btn('rn-btn--primary', 'Done')])
+  editor.classList.add('gx-w320')
+  const confirm = dialog('Delete profile?', h('p', { text: 'Delete "Work"? Its history, bookmarks and cookies are erased from this computer.' }),
+    [btn('', 'Cancel'), btn('rn-btn--danger', 'Delete profile', 'trash')])
+  return h('div', { class: 'gx-section gx-overlays' },
+    h('p', { class: 'gx-h', text: 'Overlay: palette, suggestions, permission prompt, group editor, confirm dialog' }),
+    h('div', { class: 'gx-row' }, palette, h('div', {}, suggest), h('div', { class: 'gx-promptbox' }, prompt), editor,
+      h('div', { class: 'gx-scrimbox' }, h('div', { class: 'rn-scrim' }), confirm)))
+}
+
+function shell() {
+  const skin = root.dataset.skin
+  return h('div', {},
+    h('div', { class: 'gx-section' },
+      h('p', { class: 'gx-h', text: 'Shell' }),
+      h('div', { class: 'gx-frame' },
+        h('div', { class: 'rn-frame' }, tabstrip(), toolbar(skin), locationbar(skin), bookmarkbar(skin), findbar(false),
+          h('div', { class: 'rn-frame__content' }, h('iframe', { title: 'Sample page', src: `skin-gallery.html?surface=page&page=${pageName}&skin=${skin}&incognito=${root.dataset.incognito === 'true' ? 1 : 0}&reduced=${root.dataset.reducedMotion === 'true' ? 1 : 0}` })),
+          statusbar(false)))),
+    h('div', { class: 'gx-section' }, h('p', { class: 'gx-h', text: 'Find bar (no match), status bar (error)' }),
+      h('div', { class: 'gx-frame gx-short' }, findbar(true), statusbar(true))),
+    overlays())
+}
+
+// ---- pages ----
+const pages = {
+  newtab() {
+    document.body.classList.add('rn-tiled')
+    const digits = '0123457'.split('').map((d) => h('span', { class: 'rn-odometer__digit', 'aria-hidden': 'true', text: root.dataset.incognito === 'true' ? '-' : d }))
+    const tiles = [['Daily Pixel', 'blue'], ['Webring hub with a long two line title', 'green'], ['Recipes', 'orange'], ['Mail', 'purple']]
+    return h('main', { class: 'rn-page' },
+      h('h1', { class: 'gx-center' }, h('img', { src: BASE + 'img/logo.svg', alt: '', width: '64', height: '64', class: 'gx-mark' }), ' RetroNet'),
+      root.dataset.incognito === 'true' && h('div', { class: 'rn-panel' }, h('p', { text: "You're incognito. Pages you visit in this window won't be saved to history, and cookies are deleted when you close the last incognito window. Downloads stay on disk." })),
+      h('form', { class: 'rn-search', role: 'search' }, h('label', { class: 'rn-sr-only', for: 'gx-q', text: 'Search the web' }), h('input', { class: 'rn-input', id: 'gx-q', type: 'search', placeholder: 'Search the web' }), btn('rn-btn--primary', 'Search')),
+      h('p', { class: 'rn-note' }, 'Searching with DuckDuckGo · ', h('a', { href: '#', text: 'change in Settings' })),
+      h('ul', { class: 'rn-tiles' }, ...tiles.map(([t, c]) => h('li', {}, h('a', { class: 'rn-tile', href: '#', title: t }, h('span', { class: 'rn-tile__mono', 'data-color': c, text: t[0] }), h('span', { class: 'rn-tile__title', text: t }))))),
+      h('div', { class: 'gx-foot' },
+        h('p', { class: 'rn-odometer' }, h('span', { class: 'rn-odometer__caption', text: root.dataset.incognito === 'true' ? "Incognito: visitors aren't counted." : 'You are visitor number' }), h('span', { class: 'rn-odometer__well', role: 'img', 'aria-label': 'You are visitor number 123,457' }, ...digits)),
+        h('a', { href: '#' }, h('img', { class: 'rn-badge-88', src: BASE + 'img/badge-88x31.svg', alt: 'Best viewed in RetroNet' })),
+        h('a', { href: '#', text: 'Sign the guestbook →' })))
+  },
+  history() {
+    const entry = (n, time, title, url) => h('article', { class: 'rn-guestbook-entry' },
+      h('div', { class: 'rn-guestbook-entry__head' }, h('span', { class: 'rn-guestbook-entry__visitor', text: `Visitor #${n}` }),
+        h('span', { class: 'rn-guestbook-entry__meta' }, h('span', { text: time }), iconBtn('trash', `Remove entry: ${title}`))),
+      h('div', { class: 'rn-guestbook-entry__body' }, h('span', { class: 'rn-guestbook-entry__label', text: 'Signed:' }), h('a', { class: 'rn-guestbook-entry__title', href: '#', text: title }),
+        h('span', { class: 'rn-guestbook-entry__label', text: 'From:' }), h('span', { class: 'rn-guestbook-entry__url', title: url, text: url })))
+    return h('main', { class: 'rn-page' }, h('h1', { text: 'Guestbook' }),
+      h('div', { class: 'rn-marquee' }, h('div', { class: 'rn-marquee__viewport', 'aria-hidden': 'true' }, h('span', { class: 'rn-marquee__track', text: '★ Thanks for stopping by! Every page you visit signs the guestbook. ★' })), btn('', 'Pause', 'pause', { 'aria-pressed': 'false' })),
+      h('div', { class: 'rn-toolbar-row' }, h('label', { class: 'rn-sr-only', for: 'gx-s', text: 'Search guestbook' }), h('input', { class: 'rn-input', id: 'gx-s', type: 'search', placeholder: 'Search guestbook' }), btn('rn-btn--danger', 'Clear all…', 'trash')),
+      h('section', { class: 'rn-day' }, h('h2', { text: 'Today' }), h('hr', { class: 'rn-hr' }),
+        entry('12,345', '2:47 PM', 'The Daily Pixel - front page', 'https://example.org/news/2026/10/31/a-very-long-path-that-keeps-going/index.html'),
+        entry('12,344', '2:41 PM', 'Webring hub', 'https://ring.example/')),
+      h('div', { class: 'rn-empty', text: 'Nobody has signed the guestbook yet. Go visit a few pages!' }))
+  },
+  settings() {
+    const card = (id, name, desc, checked) => h('label', { class: 'rn-radio-card' }, h('img', { src: `${BASE}img/skin-${id}.svg`, alt: '' }),
+      h('span', { class: 'rn-radio-card__name' }, h('input', { type: 'radio', name: 'skin', checked }), name), h('span', { class: 'rn-radio-card__desc', text: desc }))
+    return h('main', { class: 'rn-page rn-page--wide' }, h('h1', { text: 'Settings' }),
+      h('div', { class: 'rn-settings' },
+        h('nav', { class: 'rn-settings__nav', 'aria-label': 'Settings sections' }, h('a', { href: '#', 'aria-current': 'true', text: 'Appearance' }), h('a', { href: '#', text: 'Search' }), h('a', { href: '#', text: 'Privacy' }), h('a', { href: '#', text: 'Profiles' })),
+        h('div', {},
+          h('section', { class: 'rn-panel' }, h('h2', { text: 'Appearance' }),
+            h('div', { class: 'rn-radio-cards' }, card('y1994', '1994 Pioneer', 'Flat cool gray and serif labels.'), card('y1997', '1997 Comet', 'Silver-gray faces and a starry throbber.', true), card('y2001', '2001 Horizon', 'Glossy blue strip and round buttons.')),
+            h('label', { class: 'rn-check' }, h('input', { type: 'checkbox', checked: true }), h('span', {}, 'Reduce motion (stop the throbber and marquees)', h('br'), h('span', { class: 'rn-help', text: 'Also follows your system setting.' })))),
+          h('section', { class: 'rn-panel' }, h('h2', { text: 'Search' }), h('div', { class: 'rn-field' }, h('label', { for: 'gx-eng', text: 'Search engine' }), h('select', { class: 'rn-input', id: 'gx-eng' }, h('option', { text: 'DuckDuckGo' }))),
+            h('span', { class: 'rn-note rn-note--saved', text: 'Saved' })),
+          h('section', { class: 'rn-panel' }, h('h2', { text: 'Site permissions' }),
+            h('table', { class: 'rn-table' }, h('thead', {}, h('tr', {}, h('th', { text: 'Site' }), h('th', { text: 'Permission' }), h('th', { text: 'Decision' }), h('th', {}, h('span', { class: 'rn-sr-only', text: 'Actions' })))),
+              h('tbody', {}, h('tr', {}, h('td', { text: 'example.org' }), h('td', { text: 'Camera' }), h('td', { text: 'Blocked' }), h('td', { class: 'rn-table__actions' }, btn('', 'Reset'))),
+                h('tr', {}, h('td', { text: 'maps.example' }), h('td', { text: 'Location' }), h('td', { text: 'Allowed' }), h('td', { class: 'rn-table__actions' }, btn('', 'Reset')))))))))
+  },
+  downloads() {
+    const row = (name, status, pct, actions, err) => h('div', { class: 'rn-panel rn-download' }, icon('page', '24'),
+      h('div', {}, h('div', { class: 'rn-download__name', text: name }), h('div', { class: 'rn-download__status' + (err ? ' rn-download__status--error' : ''), text: status }),
+        pct != null && h('span', { class: 'rn-progress', role: 'progressbar', 'aria-valuenow': pct }, h('span', { class: 'rn-progress__fill gx-p60' }))),
+      h('div', { class: 'rn-download__actions' }, ...actions.map((a) => btn('', a))))
+    return h('main', { class: 'rn-page' }, h('div', { class: 'rn-page__header' }, h('h1', { text: 'Downloads' }), h('div', { class: 'rn-page__actions' }, btn('', 'Open downloads folder', 'folder'), btn('', 'Clear list'))),
+      row('retro-fonts.zip', '4.2 MB of 12.0 MB · 1.1 MB/s · 7 s left', 60, ['Pause', 'Cancel']),
+      row('manual.pdf', '12.0 MB · Done', null, ['Open', 'Show in folder', 'Remove from list']),
+      row('broken.iso', 'Failed: network error', null, ['Remove from list'], true))
+  },
+  bookmarks() {
+    return h('main', { class: 'rn-page rn-page--wide' }, h('div', { class: 'rn-page__header' }, h('h1', { text: 'Bookmarks' }), h('div', { class: 'rn-page__actions' }, btn('', 'New folder', 'folder'), btn('', 'Add bookmark', 'bookmark'))),
+      h('div', { class: 'rn-bookmarks' },
+        h('ul', { class: 'rn-tree', role: 'tree', 'aria-label': 'Folders' }, h('li', { role: 'treeitem', 'aria-selected': 'true', tabindex: '0' }, h('div', { class: 'rn-tree__row' }, icon('folder'), 'Bookmarks bar')), h('li', { role: 'treeitem', 'aria-selected': 'false', tabindex: '-1' }, h('div', { class: 'rn-tree__row' }, icon('folder'), 'Other bookmarks'))),
+        h('table', { class: 'rn-table' }, h('thead', {}, h('tr', {}, h('th', { text: 'Name' }), h('th', { text: 'Address' }), h('th', {}, h('span', { class: 'rn-sr-only', text: 'Actions' })))),
+          h('tbody', {}, ...[['Daily Pixel', 'https://example.org/'], ['Webring hub', 'https://ring.example/very/long/path/here']].map(([n, u]) => h('tr', {}, h('td', {}, icon('page'), ' ', n), h('td', { class: 'rn-table__url', text: u }), h('td', { class: 'rn-table__actions' }, btn('', 'Edit'), btn('rn-btn--danger', 'Delete'))))))))
+  },
+  certerror() {
+    return h('main', { class: 'rn-page' }, h('div', { class: 'rn-alert rn-alert--danger' }, h('span', { class: 'rn-alert__strip', 'aria-hidden': 'true', text: 'Security warning' }),
+      h('div', { class: 'rn-alert__head' }, icon('warning', '48'), h('h1', { text: "Warning: this site's certificate can't be trusted" })),
+      h('p', {}, 'Someone could be pretending to be ', h('b', { text: 'expired.example' }), ' to steal your information. RetroNet stopped loading the page.'),
+      h('p', { class: 'rn-alert__code', text: 'NET::ERR_CERT_DATE_INVALID' }),
+      h('div', { class: 'rn-alert__actions' }, btn('rn-btn--primary', 'Back to safety')),
+      h('details', { class: 'rn-details' }, h('summary', { text: 'Advanced' }), h('p', { text: 'The certificate expired. Proceed only if you know what you are doing.' }), btn('', 'Proceed to expired.example (unsafe)'))))
+  },
+  neterror() {
+    return h('main', { class: 'rn-page' }, h('div', { class: 'rn-alert' }, h('span', { class: 'rn-alert__strip', 'aria-hidden': 'true', text: 'RetroNet' }),
+      h('div', { class: 'rn-alert__head' }, icon('info', '48'), h('h1', { text: "RetroNet can't find nowhere.example" })),
+      h('p', { text: "Check the address for typos. If it's right, your connection or DNS may be down." }),
+      h('div', { class: 'rn-alert__actions' }, btn('rn-btn--primary', 'Try again', 'reload')),
+      h('details', { class: 'rn-details' }, h('summary', { text: 'Details' }), h('p', { class: 'rn-alert__code', text: 'ERR_NAME_NOT_RESOLVED' }))))
+  }
+}
+
+function render() {
+  const mount = document.getElementById('gx-root')
+  mount.replaceChildren(surface === 'page' ? (pages[pageName] || pages.newtab)() : shell())
+}
+
+// harness-only dynamic styles via CSSOM (keeps the markup free of style attributes)
+const gx = document.createElement('style')
+gx.textContent = `.gx-p60{width:60%} .gx-w320{width:320px} .gx-short{height:auto} .gx-center{display:flex;align-items:center;justify-content:center;gap:12px}
+ .gx-mark{image-rendering:auto} .gx-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:24px;flex-wrap:wrap}`
+document.head.append(gx)
+
+document.querySelectorAll('#gx-bar button[data-skin]').forEach((b) => b.addEventListener('click', () => applySkin(b.dataset.skin)))
+const sync = (id, attr) => { const el = document.getElementById(id); el.checked = root.getAttribute(attr) === 'true'; el.addEventListener('change', () => { root.setAttribute(attr, String(el.checked)); render() }) }
+sync('gx-incog', 'data-incognito'); sync('gx-reduced', 'data-reduced-motion')
+const ld = document.getElementById('gx-loading'); ld.checked = loading; ld.addEventListener('change', () => { loading = ld.checked; render() })
+const pg = document.getElementById('gx-page'); pg.value = pageName; pg.addEventListener('change', () => { pageName = pg.value; render() })
+
+applySkin(q.get('skin') || 'y1997').then(() => { if (!document.getElementById('gx-root').firstChild) render() })
+</script>
+</body>
+</html>

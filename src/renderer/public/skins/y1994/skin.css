@@ -1,0 +1,211 @@
+/* RetroNet skin y1994 "1994 Pioneer": shell + overlay (T9, DESIGN 1.2, 2.1, 3).
+   Flat cool gray, Motif-style 2px bevels, serif labels, 1-bit icons drawn with mask-image + currentColor so they
+   recolour with text (disabled, incognito, focus). URLs are relative to this file. Every rule is scoped to
+   :root[data-skin="y1994"] so two skin sheets can coexist for the one frame of a live switch. */
+@layer rn-base, rn-skin;
+@import url("../../fonts/fonts.css");
+@import url("../base/skin.css") layer(rn-base);
+
+@layer rn-skin {
+:root[data-skin="y1994"] {
+  --rn-font-ui: 700 13px/1.2 var(--rn-stack-serif);
+  --rn-font-address: 400 20px/1 var(--rn-stack-pixel);
+  --rn-font-status: 400 20px/1 var(--rn-stack-pixel);
+  --rn-font-page: 400 16px/1.5 var(--rn-stack-serif);
+  --rn-fs-ui: 13px; --rn-fs-tab: 13px; --rn-fs-address: 20px; --rn-fs-status: 20px; --rn-fs-page: 16px;
+
+  --rn-fg: #111318; --rn-fg-muted: #3E434C; --rn-fg-disabled: #7A7F88; --rn-emboss: #E6E8EC;
+  --rn-bg-frame: #B8BCC4; --rn-bg-toolbar: #B8BCC4; --rn-bg-tabstrip: #9599A2;
+  --rn-bg-input: #E9EBEE; --rn-bg-page: #BFC3C9; --rn-bg-panel: #C9CCD2; --rn-bg-statusbar: #B8BCC4;
+  --rn-bevel-light: #E6E8EC; --rn-bevel-light-2: #D3D6DB; --rn-bevel-dark: #5E636C; --rn-bevel-dark-2: #2A2D33;
+  --rn-accent: #24438C; --rn-accent-fg: #FFFFFF; --rn-fg-on-accent-strip: #111318;
+  --rn-tab-bg: #A7ABB4; --rn-tab-active-bg: #B8BCC4; --rn-tab-fg: #111318; --rn-tab-active-fg: #111318;
+  --rn-link: #1A1AA6; --rn-link-visited: #551A8B;
+  --rn-secure-fg: #1E6B1E; --rn-danger-fg: #8A1C14; --rn-danger-bg: #FFE3E0; --rn-warning-fg: #7A4A00;
+  --rn-field-fg: #111318; --rn-field-muted: #3E434C; --rn-field-secure: #1E6B1E; --rn-field-danger: #8A1C14;
+  --rn-selection-bg: #24438C; --rn-selection-fg: #FFFFFF; --rn-hover-row: #D3D6DB;
+  --rn-tooltip-bg: #FFFFE1; --rn-tooltip-fg: #000000;
+  --rn-scrim: rgba(17, 19, 24, 0.25);
+  --rn-radius: 0; --rn-radius-tab: 0; --rn-radius-window: 0;
+  --rn-tabstrip-h: 30px; --rn-tab-h: 26px; --rn-toolbar-h: 34px; --rn-omnibox-h: 24px;
+  --rn-bookmarkbar-h: 24px; --rn-findbar-h: 30px; --rn-status-h: 24px;
+  --rn-focus-ring: #000000; --rn-focus-ring-inner: #E9EBEE;
+  --rn-incognito-bg: #2F3440; --rn-incognito-fg: #E9EBEE; --rn-incognito-accent: #FFD24A; --rn-incognito-badge-fg: #111318;
+  --rn-odometer-fg: #7CFF6B;
+
+  /* Motif: only the outer pair, doubled to 2px */
+  --rn-bevel-raised: inset 2px 2px 0 var(--rn-bevel-light), inset -2px -2px 0 var(--rn-bevel-dark);
+  --rn-bevel-sunken: inset 2px 2px 0 var(--rn-bevel-dark), inset -2px -2px 0 var(--rn-bevel-light);
+  --rn-bevel-field: inset 2px 2px 0 var(--rn-bevel-dark), inset -2px -2px 0 var(--rn-bevel-light);
+  --rn-bevel-etched: inset 1px 1px 0 var(--rn-bevel-dark), inset -1px -1px 0 var(--rn-bevel-light);
+  --rn-bevel-thin-up: inset 1px 1px 0 var(--rn-bevel-light), inset -1px -1px 0 var(--rn-bevel-dark);
+  --rn-bevel-thin-down: inset 1px 1px 0 var(--rn-bevel-dark), inset -1px -1px 0 var(--rn-bevel-light);
+}
+
+/* "Night lab" incognito (shell + overlay): dark faces, hatched strip, yellow focus. Fields stay light. */
+:root[data-skin="y1994"][data-incognito="true"]:not([data-surface="page"]) {
+  --rn-fg: #E9EBEE; --rn-fg-muted: #B9BEC8; --rn-fg-disabled: #8A90A0; --rn-emboss: #15171C;
+  --rn-bg-frame: #2F3440; --rn-bg-toolbar: #2F3440; --rn-bg-statusbar: #2F3440;
+  --rn-bg-tabstrip: repeating-linear-gradient(45deg, #2F3440 0 4px, #3B4150 4px 8px);
+  --rn-tab-bg: #3B4150; --rn-tab-active-bg: #2F3440; --rn-tab-fg: #E9EBEE; --rn-tab-active-fg: #E9EBEE;
+  --rn-fg-on-accent-strip: #E9EBEE;
+  --rn-bevel-light: #4A5162; --rn-bevel-light-2: #3B4150; --rn-bevel-dark: #15171C; --rn-bevel-dark-2: #0B0C0F;
+  --rn-accent: #FFD24A; --rn-accent-fg: #111318;
+  --rn-danger-fg: #FFB4A8; --rn-secure-fg: #9FE39F;
+  --rn-focus-ring: #FFD24A; --rn-focus-ring-inner: #111318;
+}
+
+:root[data-skin="y1994"] {
+  & .rn-icon { background-color: currentColor; background-image: none; mask: no-repeat center / contain; }
+  & .rn-icon[data-icon="loading"] { mask-size: auto 16px; mask-position: 0 0; animation: rn-spinner-y1994 800ms steps(4) infinite; }
+
+  /* buttons: text-first Motif buttons */
+  & .rn-btn { box-shadow: var(--rn-bevel-raised); height: 26px; padding: 0 8px; }
+  & .rn-dialog .rn-btn { height: 26px; }
+  & .rn-page .rn-btn:not(.rn-btn--icon) { height: 28px; }
+  @media (hover: hover) { & .rn-btn:hover:not(:active):not([aria-pressed="true"]):not([disabled]) { background-color: #C6C9D0; } }
+  &[data-incognito="true"]:not([data-surface="page"]) .rn-btn:hover:not(:active):not([disabled]) { background-color: #3B4150; }
+  & .rn-btn:active, & .rn-btn[aria-pressed="true"] { box-shadow: var(--rn-bevel-sunken); }
+  & .rn-btn:active > *, & .rn-btn[aria-pressed="true"] > * { translate: 1px 1px; }
+  & .rn-btn[disabled] { color: var(--rn-fg-disabled); text-shadow: 1px 1px 0 var(--rn-emboss); }
+  & .rn-btn--primary { box-shadow: 0 0 0 1px var(--rn-bevel-dark-2), var(--rn-bevel-raised); }
+  & .rn-btn--primary:active { box-shadow: 0 0 0 1px var(--rn-bevel-dark-2), var(--rn-bevel-sunken); }
+  & .rn-btn--icon { width: 26px; height: 26px; padding: 0; }
+  & .rn-btn--labeled { gap: 4px; padding: 0 8px 0 6px; }
+  & .rn-toolbar { gap: 4px; box-shadow: inset 0 -1px 0 var(--rn-bevel-dark); }
+  & .rn-toolbar__sep { width: 2px; height: 22px; box-shadow: var(--rn-bevel-etched); }
+  & .rn-profile-btn { box-shadow: none; border: 1px solid #111318; background: var(--rn-c, var(--rn-group-grey)); color: var(--rn-c-fg, #FFFFFF); width: 26px; height: 26px; min-width: 26px; }
+  & .rn-profile-btn:active { box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.5); }
+
+  /* throbber: 32px wireframe sphere in a 34px field well, flush right */
+  & .rn-throbber-well { width: 34px; height: 34px; margin-inline-start: 4px; margin-inline-end: -4px; background: var(--rn-bg-input); box-shadow: var(--rn-bevel-field); }
+  & .rn-throbber { width: 32px; height: 32px; background-image: url("throbber.svg"); background-position: 0 0; }
+  & .rn-throbber[data-state="loading"] { animation: rn-throbber-y1994 960ms steps(8) infinite; }
+
+  /* tab strip: Motif notebook tabs */
+  & .rn-tabstrip { box-shadow: inset 0 -2px 0 var(--rn-bevel-light); }
+  & .rn-tab {
+    min-width: 96px; max-width: 200px;
+    margin-bottom: 2px;
+    font-weight: 400;
+    box-shadow: inset 2px 2px 0 var(--rn-bevel-light), inset -2px 0 0 var(--rn-bevel-dark);
+  }
+  & .rn-tab.rn-tab--pinned { flex: 0 0 36px; min-width: 36px; max-width: 36px; }
+  & .rn-tab--active { height: calc(var(--rn-tab-h) + 2px); margin-bottom: 0; font-weight: 700; }
+  @media (hover: hover) { & .rn-tab:not(.rn-tab--active):hover { background: #B0B4BC; } }
+  &[data-incognito="true"]:not([data-surface="page"]) .rn-tab:not(.rn-tab--active):hover { background: #464D5E; }
+  & .rn-tab[data-group-color]::after { top: 2px; left: 2px; right: 2px; }
+  & .rn-tab--dragging { outline: 1px dotted var(--rn-fg); outline-offset: -4px; }
+  & .rn-tab:focus-visible { outline: 2px solid var(--rn-focus-ring); outline-offset: -4px; }
+  & .rn-group-chip { border-color: #111318; font: 700 12px/1 var(--rn-stack-serif); }
+  & .rn-tabstrip__scroll { width: 20px; height: 22px; }
+
+  /* address row */
+  & .rn-locationbar { box-shadow: inset 0 1px 0 var(--rn-bevel-light), inset 0 -1px 0 var(--rn-bevel-dark); }
+  & .rn-omnibox { box-shadow: var(--rn-bevel-field); padding: 2px 4px 2px 2px; }
+  & .rn-omnibox__input { -webkit-font-smoothing: none; }
+  & .rn-omnibox__label { font-weight: 700; }
+
+  /* bookmark bar: etched top line, flat items */
+  & .rn-bookmarkbar { box-shadow: inset 0 1px 0 var(--rn-bevel-dark), inset 0 2px 0 var(--rn-bevel-light), inset 0 -1px 0 var(--rn-bevel-dark); padding-top: 2px; }
+  & .rn-bookmarkbar__item { font-weight: 400; height: 20px; }
+  @media (hover: hover) { & .rn-bookmarkbar__item:hover { box-shadow: var(--rn-bevel-thin-up); } }
+  & .rn-bookmarkbar__item:active, & .rn-bookmarkbar__item[aria-expanded="true"] { box-shadow: var(--rn-bevel-thin-down); }
+  & .rn-bookmarkbar__item:focus-visible { outline-offset: -2px; }
+
+  & .rn-findbar { box-shadow: inset 0 1px 0 var(--rn-bevel-light), inset 0 -1px 0 var(--rn-bevel-dark); }
+
+  /* status bar: three sunken panes */
+  & .rn-statusbar { box-shadow: inset 0 1px 0 var(--rn-bevel-light); padding-top: 3px; }
+  & .rn-statusbar__pane { box-shadow: var(--rn-bevel-thin-down); }
+  & .rn-statusbar__text { -webkit-font-smoothing: none; }
+  & .rn-statusbar__progress .rn-progress { background: transparent; }
+  & .rn-statusbar__zoom:focus-visible { outline-offset: -2px; }
+
+  /* progress: solid accent in a field well */
+  & .rn-progress { box-shadow: var(--rn-bevel-thin-down); padding: 1px; background-clip: content-box; }
+  & .rn-statusbar .rn-progress { box-shadow: none; padding: 0; }
+
+  & .rn-input { box-shadow: var(--rn-bevel-field); padding: 0 6px; font-weight: 400; }
+  & .rn-input:focus-visible { outline-offset: 0; }
+  & select.rn-input { background-color: var(--rn-bg-input); background-image: url("icons/chevron-down.svg"); }
+  & .rn-kbd { border: 1px solid var(--rn-fg-muted); background: var(--rn-bg-input); color: var(--rn-field-fg); font-family: var(--rn-stack-serif); font-size: 12px; }
+
+  /* overlay: Motif dialogs (2px raised + 1px black outer) */
+  & .rn-dialog { box-shadow: 0 0 0 1px #111318, var(--rn-bevel-raised); padding: 2px; }
+  & .rn-dialog__title { padding: 10px 14px 8px; box-shadow: inset 0 -1px 0 var(--rn-bevel-dark), 0 1px 0 var(--rn-bevel-light); margin: 0 4px; }
+  & .rn-dialog__body, & .rn-prompt__head p, & .rn-prompt__count { font-weight: 400; }
+  & .rn-palette__input { box-shadow: var(--rn-bevel-field); padding: 0 8px; font-size: 13px; font-weight: 400; }
+  & .rn-palette__list { box-shadow: var(--rn-bevel-field); padding: 2px; font-weight: 400; }
+  & .rn-suggest { border: 1px solid #111318; font-weight: 400; }
+  & .rn-prompt__arrow { background: var(--rn-bevel-light); }
+  & .rn-swatch { border-color: #111318; }
+
+  &[data-incognito="true"]:not([data-surface="page"]) :is(.rn-omnibox:focus-within, .rn-input:focus-visible) {
+    box-shadow: var(--rn-bevel-field), inset 0 0 0 1px var(--rn-focus-ring-inner);
+  }
+
+  /* Motif scrollbars: sunken trough, raised thumb */
+  & ::-webkit-scrollbar { width: 15px; height: 15px; background: #9599A2; box-shadow: inset 1px 1px 0 #5E636C; }
+  & ::-webkit-scrollbar-thumb { background: #B8BCC4; box-shadow: inset 2px 2px 0 #E6E8EC, inset -2px -2px 0 #5E636C; }
+  & ::-webkit-scrollbar-corner { background: #B8BCC4; }
+}
+
+@keyframes rn-throbber-y1994 { from { background-position: 0 0; } to { background-position: -256px 0; } }
+@keyframes rn-spinner-y1994 { from { mask-position: 0 0; } to { mask-position: -64px 0; } }
+
+/* reduced motion: frame 8 (sphere + hourglass) while loading */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-skin="y1994"] .rn-throbber[data-state="loading"] { animation: none; background-position: -256px 0; }
+  :root[data-skin="y1994"] .rn-icon[data-icon="loading"] { animation: none; }
+}
+:root[data-skin="y1994"][data-reduced-motion="true"] .rn-throbber[data-state="loading"] { animation: none; background-position: -256px 0; }
+:root[data-skin="y1994"][data-reduced-motion="true"] .rn-icon[data-icon="loading"] { animation: none; }
+}
+
+/* ICONS:BEGIN (generated from the icons/ folder; one rule per icon) */
+@layer rn-skin {
+:root[data-skin="y1994"] .rn-icon[data-icon="audio"] { mask-image: url("icons/audio.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="back"] { mask-image: url("icons/back.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="bell"] { mask-image: url("icons/bell.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="bookmark"] { mask-image: url("icons/bookmark.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="bookmark-filled"] { mask-image: url("icons/bookmark-filled.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="camera"] { mask-image: url("icons/camera.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="chevron-down"] { mask-image: url("icons/chevron-down.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="chevron-left"] { mask-image: url("icons/chevron-left.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="chevron-right"] { mask-image: url("icons/chevron-right.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="clipboard"] { mask-image: url("icons/clipboard.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="close"] { mask-image: url("icons/close.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="download"] { mask-image: url("icons/download.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="external"] { mask-image: url("icons/external.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="find"] { mask-image: url("icons/find.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="folder"] { mask-image: url("icons/folder.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="forward"] { mask-image: url("icons/forward.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="globe"] { mask-image: url("icons/globe.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="go"] { mask-image: url("icons/go.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="history"] { mask-image: url("icons/history.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="home"] { mask-image: url("icons/home.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="incognito"] { mask-image: url("icons/incognito.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="info"] { mask-image: url("icons/info.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="loading"] { mask-image: url("icons/loading.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="location"] { mask-image: url("icons/location.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="lock"] { mask-image: url("icons/lock.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="menu"] { mask-image: url("icons/menu.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="mic"] { mask-image: url("icons/mic.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="muted"] { mask-image: url("icons/muted.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="newtab"] { mask-image: url("icons/newtab.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="not-secure"] { mask-image: url("icons/not-secure.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="page"] { mask-image: url("icons/page.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="pause"] { mask-image: url("icons/pause.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="pin"] { mask-image: url("icons/pin.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="play"] { mask-image: url("icons/play.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="profile"] { mask-image: url("icons/profile.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="reload"] { mask-image: url("icons/reload.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="search"] { mask-image: url("icons/search.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="settings"] { mask-image: url("icons/settings.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="stop"] { mask-image: url("icons/stop.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="trash"] { mask-image: url("icons/trash.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="warning"] { mask-image: url("icons/warning.svg"); }
+:root[data-skin="y1994"] .rn-icon[data-icon="chevron-up"] { mask-image: url("icons/chevron-down.svg"); }
+}
+/* ICONS:END */

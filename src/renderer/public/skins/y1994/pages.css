@@ -1,0 +1,44 @@
+/* RetroNet skin y1994 "1994 Pioneer": internal pages (T9, DESIGN 5). Plain "HTML 2.0" look: flat gray page,
+   unfilled panels split by etched grooves, Tinos headings, underlined blue links, 1px etched table cells. */
+@layer rn-base, rn-skin;
+@import url("skin.css");
+@import url("../base/pages.css") layer(rn-base);
+
+@layer rn-skin {
+:root[data-skin="y1994"] {
+  --rn-font-heading: 700 20px/1.2 var(--rn-stack-serif);
+  --rn-heading-fg: #111318;
+  --rn-fs-h1: 28px; --rn-fs-h2: 20px;
+
+  &[data-incognito="true"] .rn-page { box-shadow: 0 0 0 1px #111318, var(--rn-bevel-raised); }
+  & .rn-panel { background: transparent; padding: 4px 0 16px; margin-bottom: 16px; }
+  & .rn-panel + .rn-panel { box-shadow: inset 0 1px 0 var(--rn-bevel-dark), inset 0 2px 0 var(--rn-bevel-light); padding-top: 18px; }
+  & .rn-panel--raised { background: var(--rn-bg-panel); padding: 16px; box-shadow: var(--rn-bevel-raised); }
+  & .rn-hr { height: 2px; box-shadow: var(--rn-bevel-etched); }
+
+  & .rn-table { border-spacing: 2px; font-family: var(--rn-stack-serif); font-weight: 400; }
+  & .rn-table :is(th, td) { box-shadow: var(--rn-bevel-etched); }
+
+  & .rn-tile { box-shadow: var(--rn-bevel-etched); color: var(--rn-link); text-decoration: none; }
+  & .rn-tile .rn-tile__title { text-decoration: underline; } /* underline the label only, not the monogram badge */
+  & .rn-tile:focus-visible { outline-offset: -4px; }
+  & .rn-tile--empty { box-shadow: none; }
+  & .rn-tile--empty .rn-tile__title { text-decoration: none; }
+
+  & .rn-guestbook-entry { box-shadow: var(--rn-bevel-etched); padding: 1px; font-family: var(--rn-stack-serif); }
+  & .rn-guestbook-entry__body { box-shadow: inset 0 1px 0 var(--rn-bevel-dark), inset 0 2px 0 var(--rn-bevel-light); padding-top: 8px; }
+  & .rn-guestbook-entry__title { font-family: var(--rn-stack-serif); }
+
+  & .rn-marquee { padding: 2px 0; font-style: italic; }
+  & .rn-progress { height: 14px; }
+  & .rn-radio-card { box-shadow: var(--rn-bevel-etched); }
+  & .rn-radio-card img { box-shadow: 0 0 0 1px #111318; }
+  & fieldset.rn-fieldset { box-shadow: var(--rn-bevel-etched); }
+  & .rn-settings__nav a { text-decoration: underline; color: var(--rn-link); }
+  & .rn-settings__nav a[aria-current] { text-decoration: none; color: var(--rn-selection-fg); }
+
+  /* certificate warning: 4px danger rule on top */
+  & .rn-alert { padding-top: 16px; box-shadow: inset 0 4px 0 var(--rn-danger-fg); }
+  & .rn-alert:not(.rn-alert--danger) { box-shadow: inset 0 2px 0 var(--rn-bevel-dark); }
+}
+}

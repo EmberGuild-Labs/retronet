@@ -1,0 +1,71 @@
+/* settings page-local layout (T22). Materials come from the skin (.rn-settings, .rn-panel, .rn-radio-card...). */
+.rn-settings__content { min-width: 0; }
+.rn-settings__content:focus { outline: none; }
+.rn-st__section h2[tabindex="-1"]:focus { outline: none; }
+.rn-st__section { scroll-margin-top: var(--rn-space-6); }
+.rn-st__section h3 { margin-top: 0; }
+
+fieldset.rn-st__plain { margin: 0 0 var(--rn-space-5); padding: 0; border: 0; box-shadow: none; }
+fieldset.rn-st__plain > legend { padding: 0; margin-bottom: var(--rn-space-4); }
+fieldset.rn-fieldset > legend { margin-bottom: var(--rn-space-2); }
+
+.rn-st__row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--rn-space-2) var(--rn-space-5); }
+.rn-st__row > .rn-check { flex: 0 1 auto; }
+.rn-st__help { display: block; margin-top: var(--rn-space-1); }
+.rn-st__inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rn-space-4); }
+.rn-st__select { min-width: 220px; max-width: 100%; }
+.rn-st__saved { min-height: 1em; }
+.rn-st__saved:empty { display: none; }
+fieldset > .rn-st__saved, .rn-st__section > .rn-st__saved { display: block; margin-top: var(--rn-space-2); }
+fieldset > .rn-st__saved:empty, .rn-st__section > .rn-st__saved:empty { display: none; }
+.rn-st__err { margin: var(--rn-space-2) 0 0; font: var(--rn-font-ui); }
+.rn-st__err:empty { display: none; }
+
+.rn-st__indent { padding-inline-start: 26px; margin-top: var(--rn-space-2); }
+.rn-st__url { width: min(100%, 420px); }
+.rn-st__url:disabled { opacity: 0.6; }
+
+.rn-st__label { margin: 0 0 var(--rn-space-3); }
+.rn-st__pathbox { display: inline-flex; align-items: center; min-height: 28px; max-width: 100%; padding: 0 var(--rn-space-4); background: var(--rn-bg-input); color: var(--rn-field-fg, var(--rn-fg)); box-shadow: var(--rn-bevel-field); }
+.rn-st__path { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.rn-st__clear .rn-check { margin-bottom: var(--rn-space-1); }
+.rn-st__range { max-width: 260px; margin-top: var(--rn-space-5); }
+.rn-st__clear .rn-help { margin: 0 0 var(--rn-space-5); }
+
+.rn-st__perms { margin-bottom: var(--rn-space-4); }
+.rn-st__perms .rn-table { table-layout: fixed; }
+.rn-st__perms th:nth-child(2), .rn-st__perms th:nth-child(3) { width: 130px; }
+.rn-st__perms th:nth-child(4) { width: 80px; }
+.rn-st__origin { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--rn-stack-mono); }
+.rn-st__decision { display: inline-flex; align-items: center; gap: var(--rn-space-2); font-weight: 700; }
+.rn-st__decision--allow { color: var(--rn-secure-fg); }
+.rn-st__decision--block { color: var(--rn-danger-fg); }
+.rn-st__empty { padding: var(--rn-space-5) 0; text-align: start; }
+
+.rn-st__profiles { list-style: none; margin: 0 0 var(--rn-space-5); padding: 0; }
+.rn-st__profile { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rn-space-4); min-height: 36px; padding: var(--rn-space-2) 0; font: var(--rn-font-ui); }
+.rn-st__profile + .rn-st__profile { box-shadow: inset 0 1px 0 var(--rn-bevel-dark), inset 0 2px 0 var(--rn-bevel-light); padding-top: var(--rn-space-3); }
+.rn-st__pname { font-weight: 700; }
+.rn-st__pactions { display: flex; gap: var(--rn-space-2); margin-inline-start: auto; }
+.rn-st__profile--editing .rn-st__nameform { flex: 1 0 100%; }
+.rn-st__nameform { max-width: 360px; }
+.rn-st__nameform .rn-input { width: 100%; }
+.rn-st__addslot { margin-bottom: var(--rn-space-4); }
+
+.rn-st__dot { width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--rn-group-grey); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+.rn-st__dot[data-color="blue"] { background: var(--rn-group-blue); }
+.rn-st__dot[data-color="red"] { background: var(--rn-group-red); }
+.rn-st__dot[data-color="yellow"] { background: var(--rn-group-yellow); }
+.rn-st__dot[data-color="green"] { background: var(--rn-group-green); }
+.rn-st__dot[data-color="pink"] { background: var(--rn-group-pink); }
+.rn-st__dot[data-color="purple"] { background: var(--rn-group-purple); }
+.rn-st__dot[data-color="cyan"] { background: var(--rn-group-cyan); }
+.rn-st__dot[data-color="orange"] { background: var(--rn-group-orange); }
+
+@media (forced-colors: active) { .rn-st__dot { forced-color-adjust: none; } }
+/* Cards in a row keep their titles level: no stretched row gaps. */
+.rn-radio-card { align-content: start; }
+/* y1994's skin colours nav links with --rn-link, which also wins on the selected row (navy on navy).
+   Page-local fix until the skin sheet is updated (FIX-GAPS). */
+.rn-settings__nav a[aria-current] { color: var(--rn-selection-fg); text-decoration: none; }

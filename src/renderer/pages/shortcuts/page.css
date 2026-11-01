@@ -1,0 +1,14 @@
+/* retronet://shortcuts layout (T21). Unlayered: position and size only. */
+
+.rn-shortcuts__toolbar { margin-bottom: 4px; }
+.rn-shortcuts__toolbar .rn-input { min-width: 0; }
+.rn-shortcuts__status { margin: 0 0 8px; min-height: 1.4em; font-size: 12px; }
+.rn-shortcuts__group[hidden], .rn-shortcuts__group tr[hidden] { display: none; }
+.rn-shortcuts__status:empty { min-height: 0; margin: 0; }
+.rn-shortcuts__group:first-child > h2 { margin-top: 16px; }
+
+.rn-shortcuts .rn-table .rn-shortcuts__action { width: 60%; }
+.rn-shortcuts .rn-table td.rn-shortcuts__keys { white-space: normal; }
+.rn-shortcuts__combo { display: inline-flex; align-items: center; white-space: nowrap; vertical-align: middle; }
+.rn-shortcuts__or { white-space: pre; }
+.rn-shortcuts .rn-table tbody tr { height: 28px; }

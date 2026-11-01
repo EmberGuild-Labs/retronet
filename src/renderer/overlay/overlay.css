@@ -1,0 +1,147 @@
+/* Overlay layout (T20). Unlayered, so it beats the skins' @layer rules: it positions things and adds the few pieces
+   the skins do not style (overlay check row, dialog error text, fullscreen notice). Colours, bevels and fonts stay
+   in skins/<id>/skin.css via the --rn-* tokens (PLAN 1.13, DESIGN 3.2, 3.7-3.9). No transition: all anywhere. */
+
+html, body {
+  background: transparent;
+  overflow: hidden;
+  height: 100%;
+}
+
+.rn-overlay {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* ---------- palette: top-center, 64px from the window top, no motion (DESIGN 3.7, 6.2) ---------- */
+.rn-overlay .rn-palette {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  translate: -50% 0;
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 88px);
+}
+.rn-palette .rn-dialog__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.rn-palette__list { flex: 0 1 auto; min-height: 0; }
+.rn-palette__item > .rn-icon,
+.rn-palette__favicon { flex: none; width: 16px; height: 16px; }
+.rn-palette__favicon { object-fit: contain; image-rendering: auto; }
+.rn-palette__item--empty { justify-content: center; }
+.rn-overlay-keys { display: inline-flex; flex: none; align-items: center; }
+/* Key caps keep their own face on the selection colour so they stay legible. */
+.rn-palette__item--selected .rn-kbd { color: var(--rn-fg); }
+
+/* ---------- anchored popovers: permission prompt, group editor under its chip ---------- */
+.rn-overlay .rn-prompt,
+.rn-overlay .rn-dialog--anchored {
+  position: absolute;
+}
+.rn-prompt__head > .rn-icon { flex: none; margin-top: 1px; }
+.rn-prompt__close { flex: none; margin: -6px -6px 0 0; }
+.rn-prompt .rn-dialog__actions .rn-btn { min-width: 84px; }
+
+/* checkbox row (pages.css has the same class for pages; the overlay only loads skin.css) */
+.rn-overlay .rn-check {
+  display: flex;
+  align-items: center;
+  gap: var(--rn-space-4);
+  min-height: 24px;
+  font: var(--rn-font-ui);
+  font-weight: 400;
+  cursor: default;
+}
+.rn-overlay .rn-check input { flex: none; width: 14px; height: 14px; margin: 0; }
+
+/* ---------- modal dialogs: centered over the scrim (DESIGN 3.9) ---------- */
+.rn-modal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.rn-modal > .rn-dialog { position: relative; }
+.rn-dialog__form { display: contents; }
+.rn-dialog__input { width: 100%; }
+.rn-dialog__message { margin: 0; max-width: 60ch; }
+.rn-dialog__error {
+  margin: 0;
+  color: var(--rn-danger-fg);
+  font-weight: 700;
+}
+.rn-dialog__error::before { content: "! "; }
+.rn-dialog__field--last { margin-bottom: 0; }
+
+/* ---------- HTTP sign-in (Q3) ---------- */
+.rn-overlay .rn-http-auth { width: 400px; max-width: calc(100vw - 16px); }
+.rn-http-auth .rn-dialog__message { margin-bottom: var(--rn-space-4); }
+.rn-http-auth .rn-dialog__message p { margin: 0 0 var(--rn-space-3); overflow-wrap: anywhere; }
+.rn-http-auth .rn-dialog__message p:last-child { margin-bottom: 0; }
+.rn-http-auth__host { font-weight: 700; }
+.rn-http-auth__warning { color: var(--rn-danger-fg); }
+
+/* ---------- group editor ---------- */
+.rn-overlay .rn-group-editor { width: 320px; max-width: calc(100vw - 16px); }
+.rn-group-editor:not(.rn-dialog--anchored) { position: absolute; top: 50%; left: 50%; translate: -50% -50%; }
+.rn-group-editor__name { width: 100%; }
+.rn-group-editor .rn-swatches { padding: 4px; }
+.rn-group-editor__actions { gap: var(--rn-space-3); }
+.rn-group-editor__actions .rn-btn { min-width: 0; }
+.rn-dialog__spacer { flex: 1 1 auto; }
+:root[data-platform="win32"] .rn-group-editor__actions { flex-direction: row; }
+
+/* ---------- omnibox suggestions: main sizes the view to the list ---------- */
+.rn-overlay-suggest {
+  position: absolute;
+  box-sizing: border-box;
+}
+.rn-suggest__item > .rn-icon { flex: none; width: 16px; height: 16px; }
+.rn-suggest__url::before { content: "\2014\00a0"; }
+
+/* ---------- fullscreen notice (anti-spoofing; never takes focus or clicks) ---------- */
+.rn-overlay[data-kind="fullscreen-notice"] { pointer-events: none; }
+.rn-fsnotice {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: var(--rn-space-5);
+  max-width: calc(100vw - 48px);
+  padding: var(--rn-space-4) var(--rn-space-6);
+  background: var(--rn-tooltip-bg);
+  color: var(--rn-tooltip-fg);
+  font: var(--rn-font-ui);
+  font-size: 14px;
+  border: 1px solid var(--rn-tooltip-fg);
+  border-radius: var(--rn-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  /* occasional state change: 200ms fade + 8px drop in, 150ms fade out */
+  transition: opacity 200ms var(--rn-ease-out), translate 200ms var(--rn-ease-out);
+  @starting-style { opacity: 0; translate: -50% -8px; }
+}
+.rn-fsnotice__text { min-width: 0; overflow-wrap: anywhere; text-wrap: pretty; }
+/* The host is the whole point of the notice (anti-spoofing): wrap it, never truncate it. */
+.rn-fsnotice__hint { flex: none; white-space: nowrap; }
+.rn-fsnotice .rn-kbd { margin: 0 2px; }
+.rn-fsnotice--leaving { opacity: 0; transition: opacity 150ms var(--rn-ease-out); }
+:root[data-skin="y2001"] .rn-fsnotice { border-radius: 6px; border-color: #0B3F9E; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rn-fsnotice { transition-property: opacity; @starting-style { translate: -50% 0; } }
+}
+:root[data-reduced-motion="true"] .rn-fsnotice { transition-property: opacity; @starting-style { translate: -50% 0; } }
+
+@media (forced-colors: active) {
+  .rn-fsnotice { border: 1px solid CanvasText; background: Canvas; color: CanvasText; }
+}

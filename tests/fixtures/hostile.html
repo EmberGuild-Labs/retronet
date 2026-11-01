@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hostile</title>
+<script>
+  // A page that tries to swallow every key, trap unload, and find any IPC surface it can reach.
+  window.__keys = []
+  for (const t of ['keydown', 'keyup', 'keypress']) {
+    addEventListener(t, (e) => { window.__keys.push(t + ':' + e.key); e.preventDefault(); e.stopImmediatePropagation() }, true)
+  }
+  window.__probe = () => {
+    const found = []
+    const names = ['retronet', 'require', 'process', 'ipcRenderer', 'electron', 'module', 'Buffer', 'global', '__electron', 'electronAPI']
+    for (const n of names) if (typeof window[n] !== 'undefined') found.push(n)
+    for (const k of Object.getOwnPropertyNames(window)) {
+      try {
+        const v = window[k]
+        if (v && typeof v === 'object' && (typeof v.invoke === 'function' || typeof v.send === 'function' || typeof v.sendSync === 'function')) found.push('ipc-like:' + k)
+      } catch (e) { /* cross-origin getters */ }
+    }
+    return found
+  }
+</script>
+</head>
+<body>
+<p>apple banana apple cherry apple</p>
+<a id="lnk" href="/b" style="display:block;width:200px;height:40px;background:#ccc">link to b</a>
+<input id="inp" value="hello">
+</body>
+</html>

@@ -19,8 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-Third-party content keeps its own license: bundled fonts are under the SIL Open
-Font License (see src/renderer/public/fonts/licenses/), and the photos on the
-hidden easter-egg pages are under the Creative Commons licenses listed in
-ASSETS.md.

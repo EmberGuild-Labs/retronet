@@ -1,0 +1,28 @@
+/* Shell gestures for the hidden era pages (B7, DESIGN-EGGS 4). Unlayered, like shell.css.
+   The well keeps the default cursor and stays aria-hidden: the gesture is pointer-only, About is the keyboard path. */
+:root:is([data-skin="y1994"], [data-skin="y1997"], [data-skin="y1999"]) .rn-throbber-well { pointer-events: auto; position: relative; overflow: hidden; }
+
+/* Status-bar note, drawn over the pane's own text so statusbar.ts repaints never fight it. The pane background is
+   transparent, so the note paints the bar colour; the 2px inset keeps the pane bevel visible. */
+.rn-statusbar__text[data-egg-note] { position: relative; }
+.rn-statusbar__text[data-egg-note]::after {
+  content: attr(data-egg-note); position: absolute; inset: 2px; display: flex; align-items: center;
+  padding-inline: 4px; background: var(--rn-bg-statusbar); color: var(--rn-fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* y1999: the note as a candy tooltip (inside the status bar, so the web view cannot clip it). */
+:root[data-skin="y1999"] .rn-statusbar__text[data-egg-note]::after {
+  inset: 2px auto 2px 0; max-width: 100%; padding: 0 10px; border-radius: 8px;
+  background: #FFFBE0; border: 1px solid #5F6C78; color: #15202B; font: 400 12px/1 var(--rn-stack-sans01);
+}
+
+/* y1997: an 8-frame comet streak across the well (eggs.ts sets data-egg="comet" for 900 ms). */
+:root[data-skin="y1997"] .rn-throbber-well[data-egg="comet"]::after {
+  content: ""; position: absolute; left: -14px; top: 8px; width: 14px; height: 2px;
+  background: linear-gradient(90deg, transparent, #F08A24 40%, #FFFF66 80%, #FFFFFF);
+  animation: rn-egg-comet 640ms steps(8) forwards;   /* 80 ms per frame, as choppy as the throbber */
+}
+@keyframes rn-egg-comet { to { translate: 66px 14px; } }   /* shallow downward arc across the 52px well */
+@media (prefers-reduced-motion: reduce) { :root[data-skin="y1997"] .rn-throbber-well[data-egg]::after { content: none; } }
+:root[data-reduced-motion="true"] .rn-throbber-well[data-egg]::after { content: none; }

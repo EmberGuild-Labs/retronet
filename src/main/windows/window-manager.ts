@@ -9,12 +9,21 @@ import { WebContentsView as View } from 'electron'
 import type { ShellEventName, ShellEventPayload } from '../../shared/ipc-contract'
 import { getSkin, type SkinInfo } from '../../shared/skins'
 import type { DialogSpec, OverlayEvent, Rect, WindowSnapshot } from '../../shared/types'
+import { backgroundTestMode } from '../app-paths'
 import { router, sendShellEvent } from '../ipc/router'
 import { logger } from '../logger'
 import { attachNavigationGuards } from '../security/navigation-guards'
 import { uiWebPreferences } from '../security/web-prefs'
 import { browserTabs, createTabManager } from '../tabs/tab-manager'
 import type { Insets, ProfileContext, ShowOverlayOptions, TabManager, WindowContext } from '../types'
+
+/** Test runs only: the window renders but is never shown or focused, and the app never takes the Dock/foreground. */
+function hideForTests(win: BrowserWindow): void {
+  if (process.platform === 'darwin') app.dock?.hide()
+  win.show = () => {}
+  win.showInactive = () => {}
+  win.focus = () => {}
+}
 
 export const SHELL_URL = 'retronet://shell/'
 export const OVERLAY_URL = 'retronet://overlay/'
@@ -120,8 +129,19 @@ function localizeOverlayEvent(ev: Exclude<OverlayEvent, { kind: 'hide' }>, bound
       return { ...ev, anchor: translate(ev.anchor, bounds) }
     case 'group-editor':
       return { ...ev, anchor: ev.anchor ? translate(ev.anchor, bounds) : null }
+    case 'menu':
+      return { ...ev, menu: { ...ev.menu, anchor: translate(ev.menu.anchor, bounds) } }
     default:
       return ev
+  }
+}
+
+/** Run an overlay event's onDismiss; a throwing callback never breaks the overlay bookkeeping. */
+function callDismiss(fn: () => void): void {
+  try {
+    fn()
+  } catch (err) {
+    logger.error('overlay onDismiss failed', err)
   }
 }
 
@@ -159,6 +179,8 @@ class AppWindow implements WindowContext {
   private activeView: WebContentsView | null = null
   private overlayShown: Exclude<OverlayEvent, { kind: 'hide' }> | null = null
   private overlayBounds: Rectangle | undefined
+  /** `ShowOverlayOptions.onDismiss` of the event shown now. */
+  private overlayOnDismiss: (() => void) | null = null
   private overlayLoaded = false
   private overlayPending: OverlayEvent | null = null
   private focusBeforeOverlay: 'shell' | 'tab' | null = null
@@ -193,6 +215,7 @@ class AppWindow implements WindowContext {
     })
     this.shell = this.win.webContents
     this._nativeFullscreen = this.win.isFullScreen()
+    if (backgroundTestMode()) hideForTests(this.win)
 
     this.overlay = new View({ webPreferences: uiWebPreferences() })
     this.overlay.setBackgroundColor('#00000000')
@@ -315,8 +338,10 @@ class AppWindow implements WindowContext {
     if (!this.overlayShown) {
       this.focusBeforeOverlay = this.shell.isFocused() ? 'shell' : 'tab'
     }
+    const replaced = this.overlayOnDismiss
     this.overlayShown = event
     this.overlayBounds = opts.bounds
+    this.overlayOnDismiss = opts.onDismiss ?? null
     // Re-adding moves the view to the top of the stack.
     this.win.contentView.addChildView(this.overlay)
     this.overlay.setBounds(this.overlayBoundsNow())
@@ -324,13 +349,16 @@ class AppWindow implements WindowContext {
     if (this.overlayLoaded) sendShellEvent(this.overlay.webContents, 'overlay', local)
     else this.overlayPending = local
     if (opts.focus) this.overlay.webContents.focus()
+    if (replaced) callDismiss(replaced)
   }
 
   hideOverlay(): void {
     if (!this.overlayShown) return
     const wasFocused = this.overlay.webContents.isFocused()
+    const dismissed = this.overlayOnDismiss
     this.overlayShown = null
     this.overlayBounds = undefined
+    this.overlayOnDismiss = null
     this.overlayPending = null
     for (const id of [...this.dialogs.keys()]) this.resolveDialog(id, null)
     this.win.contentView.removeChildView(this.overlay)
@@ -340,6 +368,7 @@ class AppWindow implements WindowContext {
       else this.tabs.focusActive()
     }
     this.focusBeforeOverlay = null
+    if (dismissed) callDismiss(dismissed)
   }
 
   overlayKind(): OverlayEvent['kind'] | null {
@@ -513,6 +542,9 @@ class AppWindow implements WindowContext {
     if (this.stateTimer) clearTimeout(this.stateTimer)
     if (this.noticeTimer) clearTimeout(this.noticeTimer)
     for (const id of [...this.dialogs.keys()]) this.resolveDialog(id, null)
+    const dismissed = this.overlayOnDismiss
+    this.overlayOnDismiss = null
+    if (dismissed) callDismiss(dismissed)
     try {
       this.tabs?.dispose()
     } catch (err) {

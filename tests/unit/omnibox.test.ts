@@ -87,7 +87,17 @@ describe('classifyInput: blocked', () => {
     ['data:text/html,<script>alert(1)</script>', 'dangerous-scheme'],
     ['vbscript:x', 'dangerous-scheme'],
     ['blob:https://example.com/uuid', 'dangerous-scheme'],
-    ['view-source:https://example.com', 'dangerous-scheme'],
+    ['view-source:file:///etc/hosts', 'dangerous-scheme'],
+    ['view-source:retronet://settings/', 'dangerous-scheme'],
+    ['view-source:view-source:https://example.com/', 'dangerous-scheme'],
+    ['view-source:javascript:alert(1)', 'dangerous-scheme'],
+    ['view-source:data:text/html,x', 'dangerous-scheme'],
+    ['view-source:about:blank', 'dangerous-scheme'],
+    ['view-source:example.com', 'dangerous-scheme'],
+    ['view-source:https://', 'dangerous-scheme'],
+    ['view-source:https://exa mple.com/', 'dangerous-scheme'],
+    ['view-source: https://example.com/', 'dangerous-scheme'],
+    ['view-source:', 'dangerous-scheme'],
     ['chrome://settings', 'dangerous-scheme'],
     ['chrome://version', 'dangerous-scheme'],
     ['about:config', 'dangerous-scheme'],
@@ -140,5 +150,32 @@ describe('dropPayload (Q9: links dropped on the tab strip are untyped)', () => {
     expect(dropPayload('not a url at all', '')).toBeNull()
     expect(dropPayload('', '   ')).toBeNull()
     expect(dropPayload('', 'https://example.com/' + 'a'.repeat(OMNIBOX_INPUT_MAX))).toBeNull()
+  })
+})
+
+describe('classifyInput: typed view-source (AC54)', () => {
+  it.each([
+    ['view-source:https://example.com', 'view-source:https://example.com/'],
+    ['view-source:http://127.0.0.1:8080/a?b=1#c', 'view-source:http://127.0.0.1:8080/a?b=1#c'],
+    ['VIEW-SOURCE:HTTPS://Example.COM/x', 'view-source:https://example.com/x'],
+    ['  view-source:https://example.com/  ', 'view-source:https://example.com/']
+  ])('%j -> %s', (input, url) => {
+    expect(classifyInput(input)).toEqual({ kind: 'url', url })
+  })
+  it('a dropped view-source: link is refused (not http(s))', () => {
+    expect(dropPayload('view-source:https://example.com/', '')).toBeNull()
+  })
+})
+
+describe('classifyInput: view-source userinfo (AC73)', () => {
+  it.each([
+    ['view-source:http://u:p@h.test/', 'view-source:http://h.test/'],
+    ['view-source:https://u@h.test/x?y#z', 'view-source:https://h.test/x?y#z']
+  ])('%j -> %s', (input, url) => {
+    expect(classifyInput(input)).toEqual({ kind: 'url', url })
+  })
+  it('file: and nested view-source: stay blocked', () => {
+    expect(classifyInput('view-source:file:///etc/hosts').kind).toBe('blocked')
+    expect(classifyInput('view-source:view-source:').kind).toBe('blocked')
   })
 })

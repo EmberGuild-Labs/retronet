@@ -14,6 +14,7 @@ module.exports = {
     '!node_modules/**/{src,test,tests,__tests__,benchmarks}/**',
     '!node_modules/**/*.{md,ts.map}'
   ],
+  protocols: [{ name: 'Web site URL', schemes: ['http', 'https'], role: 'Viewer' }], // CFBundleURLTypes
   publish: null, // no auto-update, no telemetry (AC40)
   electronFuses: {
     runAsNode: false,
@@ -37,6 +38,15 @@ module.exports = {
     notarize,
     minimumSystemVersion: '13.0',
     extendInfo: {
+      // Lets macOS list RetroNet as a browser. Rank Alternate: never takes .html away from the user's editor.
+      CFBundleDocumentTypes: [
+        {
+          CFBundleTypeName: 'HTML document',
+          CFBundleTypeRole: 'Viewer',
+          LSHandlerRank: 'Alternate',
+          LSItemContentTypes: ['public.html', 'public.xhtml']
+        }
+      ],
       // Shown by macOS the first time a site you allowed asks for the device (T13 permission prompt comes first).
       NSCameraUsageDescription: 'RetroNet needs camera access so websites you allow can use your camera.',
       NSMicrophoneUsageDescription: 'RetroNet needs microphone access so websites you allow can use your microphone.',

@@ -27,6 +27,8 @@ export interface CreateTabOptions {
   url?: string
   /** `url` came from the user typing it (the only way to load file:). */
   typed?: boolean
+  /** The load is user-started (open-url, open-file, second-instance), so it may play the dial-up. Default false. */
+  user?: boolean
   /** Keep the current tab active. */
   background?: boolean
   /** Strip index (clamped into the pinned / unpinned region). Default: the end, or after the opener. */
@@ -405,10 +407,12 @@ class TabManagerImpl implements BrowserTabManager, TabHost {
       muted: opts.muted
     })
     this.order.splice(this.insertionIndex(tab, opts.index), 0, tab)
-    if (opts.history) tab.restoreHistory(opts.history.entries, opts.history.index)
-    else if (!opts.adopt) tab.load(url, { typed: opts.typed, user: false })
+    // Activate before loading: a foreground, user-started load (e.g. a link from another app) must see
+    // its tab as active when the dial-up rule runs (AC55/AC72).
     if (!opts.background || this.activeId === null) this.activate(tab.id)
     else this.structural()
+    if (opts.history) tab.restoreHistory(opts.history.entries, opts.history.index)
+    else if (!opts.adopt) tab.load(url, { typed: opts.typed, user: opts.user === true })
     return tab
   }
 

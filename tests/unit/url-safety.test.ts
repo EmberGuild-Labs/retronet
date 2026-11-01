@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { stripUrlCredentials } from '../../src/main/storage/url-credentials'
 import {
   displayPartsFor,
   displayUrl,
   omniboxSegments,
   isExternalAllowlisted,
+  isWebViewSource,
   navigationSchemeAllowed,
-  securityStateFor
+  securityStateFor,
+  viewSourceInner
 } from '@shared/url-safety'
 
 describe('navigationSchemeAllowed', () => {
@@ -62,7 +67,14 @@ describe('securityStateFor', () => {
     ['retronet://settings', false, 'internal'],
     ['about:blank', false, 'internal'],
     ['file:///tmp/a', false, 'file'],
-    ['garbage', false, 'insecure']
+    ['garbage', false, 'insecure'],
+    ['view-source:https://example.com/', false, 'secure'],
+    ['view-source:https://example.com/', true, 'cert-warning'],
+    ['view-source:http://example.com/', false, 'insecure'],
+    ['VIEW-SOURCE:HTTPS://example.com/', false, 'secure'],
+    ['view-source:retronet://settings/', false, 'insecure'],
+    ['view-source:file:///etc/hosts', false, 'insecure'],
+    ['view-source:view-source:https://example.com/', false, 'insecure']
   ])('%s override=%s -> %s', (url, override, expected) => {
     expect(securityStateFor(url, override)).toBe(expected)
   })
@@ -145,5 +157,77 @@ describe('displayUrl / omniboxSegments (D11, Q6)', () => {
     expect(omniboxSegments('file:///Users/me/a.html')).toBeNull()
     expect(omniboxSegments('about:blank')).toBeNull()
     expect(omniboxSegments('hello world')).toBeNull()
+  })
+})
+
+describe('view-source: (AC54)', () => {
+  it('viewSourceInner returns the text after the scheme, any case', () => {
+    expect(viewSourceInner('view-source:https://a.test/x?y#z')).toBe('https://a.test/x?y#z')
+    expect(viewSourceInner('VIEW-SOURCE:http://a.test/')).toBe('http://a.test/')
+    expect(viewSourceInner('view-source:view-source:http://a.test/')).toBe('view-source:http://a.test/')
+    expect(viewSourceInner('https://a.test/')).toBeNull()
+    expect(viewSourceInner('garbage')).toBeNull()
+  })
+  it('isWebViewSource: only an http(s) inner URL', () => {
+    expect(isWebViewSource('view-source:https://a.test/')).toBe(true)
+    expect(isWebViewSource('view-source:HTTP://a.test/')).toBe(true)
+    for (const u of [
+      'view-source:file:///etc/hosts',
+      'view-source:retronet://newtab/',
+      'view-source:view-source:https://a.test/',
+      'view-source:javascript:alert(1)',
+      'view-source:data:text/html,x',
+      'view-source:about:blank',
+      'view-source:blob:https://a.test/1',
+      'view-source:chrome-extension://x/y',
+      'view-source: https://a.test/',
+      'view-source:',
+      'https://a.test/'
+    ]) {
+      expect(isWebViewSource(u), u).toBe(false)
+    }
+  })
+  it('navigationSchemeAllowed: browser-initiated only, http(s) inner only', () => {
+    const vs = 'view-source:https://example.com/'
+    expect(navigationSchemeAllowed(vs, { browserInitiated: true })).toBe(true)
+    expect(navigationSchemeAllowed('VIEW-SOURCE:http://example.com/', { browserInitiated: true })).toBe(true)
+    expect(navigationSchemeAllowed(vs, {})).toBe(false)
+    expect(navigationSchemeAllowed(vs, { currentUrl: 'https://example.com/' })).toBe(false)
+    expect(navigationSchemeAllowed(vs, { currentUrl: vs })).toBe(false)
+    expect(navigationSchemeAllowed(vs, { currentUrl: 'retronet://newtab/' })).toBe(false)
+    expect(navigationSchemeAllowed('view-source:file:///etc/hosts', { browserInitiated: true, typed: true })).toBe(false)
+    expect(navigationSchemeAllowed('view-source:retronet://settings/', { browserInitiated: true })).toBe(false)
+    expect(navigationSchemeAllowed('view-source:view-source:https://example.com/', { browserInitiated: true })).toBe(false)
+    expect(navigationSchemeAllowed('view-source:javascript:alert(1)', { browserInitiated: true })).toBe(false)
+  })
+})
+
+describe('view-source userinfo (AC73, E1/R34)', () => {
+  it.each([
+    ['view-source:http://u:p@h.test/', 'view-source:http://h.test/'],
+    ['view-source:https://u@h.test/x?y#z', 'view-source:https://h.test/x?y#z'],
+    ['view-source:https://h.test/x', 'view-source:https://h.test/x'],
+    ['view-source:file:///etc/hosts', 'view-source:file:///etc/hosts'],
+    ['view-source:view-source:http://u:p@h.test/', 'view-source:view-source:http://h.test/']
+  ])('displayUrl and stripUrlCredentials: %s', (input, out) => {
+    expect(displayUrl(input)).toBe(out)
+    expect(stripUrlCredentials(input)).toBe(out)
+  })
+  it('isWebViewSource: file: and nested view-source: are false', () => {
+    expect(isWebViewSource('view-source:http://u:p@h.test/')).toBe(true)
+    expect(isWebViewSource('view-source:file:///x')).toBe(false)
+    expect(isWebViewSource('view-source:view-source:')).toBe(false)
+  })
+  it('no other view-source regex in src/', () => {
+    const hits: string[] = []
+    const walk = (d: string): void => {
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        const p = join(d, e.name)
+        if (e.isDirectory()) walk(p)
+        else if (/\.(ts|tsx)$/.test(e.name) && /\/[^/\n]*view-source[^/\n]*\/[a-z]*[.,)]/i.test(readFileSync(p, 'utf8'))) hits.push(p)
+      }
+    }
+    walk(join(__dirname, '../../src'))
+    expect(hits).toEqual([])
   })
 })

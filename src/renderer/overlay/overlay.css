@@ -136,6 +136,7 @@ html, body {
 .rn-fsnotice .rn-kbd { margin: 0 2px; }
 .rn-fsnotice--leaving { opacity: 0; transition: opacity 150ms var(--rn-ease-out); }
 :root[data-skin="y2001"] .rn-fsnotice { border-radius: 6px; border-color: #0B3F9E; }
+:root[data-skin="y1999"] .rn-fsnotice { border-radius: 10px; border-color: #176C80; }
 
 @media (prefers-reduced-motion: reduce) {
   .rn-fsnotice { transition-property: opacity; @starting-style { translate: -50% 0; } }

@@ -88,6 +88,17 @@ describe('command registry', () => {
     expect(primary(id, 'win')).toBe(win)
   })
 
+  it('page.viewSource: Cmd+Alt+U on mac, Ctrl+U on win, in the palette, no duplicate chord (AC54)', () => {
+    const c = getCommand('page.viewSource')
+    expect(c).toMatchObject({ title: 'View page source', category: 'Tools', palette: true })
+    expect(c?.accelerator).toEqual({ mac: ['Cmd+Alt+U'], win: ['Ctrl+U'] })
+    for (const p of PLATFORMS) {
+      expect(findDuplicateAccelerators(p)).toEqual([])
+      const others = COMMANDS.filter((x) => x.id !== 'page.viewSource').flatMap((x) => x.accelerator[p].map(normalizeAccelerator))
+      expect(others).not.toContain(normalizeAccelerator(c!.accelerator[p][0]!))
+    }
+  })
+
   it('has the secondary AC21 chords', () => {
     expect(getCommand('tab.next')?.accelerator.mac).toContain('Cmd+Alt+Right')
     expect(getCommand('tab.previous')?.accelerator.mac).toContain('Cmd+Alt+Left')

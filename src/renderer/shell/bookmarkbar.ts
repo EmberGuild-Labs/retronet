@@ -153,13 +153,21 @@ export function mountBookmarkBar(host: HTMLElement, api: ShellBridge): BookmarkB
     t instanceof Element ? (t.closest<HTMLElement>('.rn-bookmarkbar__item') ?? null) : null
   const nodeOf = (n: HTMLElement): BookmarkNode | undefined => nodes.find((x) => x.id === n.dataset.id)
 
-  async function openFolder(btn: HTMLElement, folderId = btn.dataset.id as string): Promise<void> {
+  async function openFolder(btn: HTMLElement, folderId = btn.dataset.id as string, keyboard = false): Promise<void> {
     const r = btn.getBoundingClientRect()
+    const hadFocus = btn === document.activeElement
     btn.setAttribute('aria-expanded', 'true')
     try {
-      await api.bookmarks.barFolderMenu({ folderId, x: Math.round(r.left), y: Math.round(r.bottom) })
+      await api.bookmarks.barFolderMenu({
+        folderId,
+        x: Math.round(r.left),
+        y: Math.round(r.bottom),
+        anchor: { x: r.left, y: r.top, width: r.width, height: r.height },
+        ...(keyboard ? { keyboard: true } : {})
+      })
     } finally {
       btn.setAttribute('aria-expanded', 'false')
+      if (hadFocus && btn.isConnected && document.activeElement !== btn) btn.focus({ preventScroll: true })
     }
   }
 
@@ -176,7 +184,7 @@ export function mountBookmarkBar(host: HTMLElement, api: ShellBridge): BookmarkB
     e.preventDefault() // never navigate the shell itself
     const b = nodeOf(n)
     roving = n.dataset.id ?? null
-    if (b?.kind === 'folder') void openFolder(n)
+    if (b?.kind === 'folder') void openFolder(n, undefined, e.detail === 0)
     else if (b) openBookmark(b.url, e)
   })
   items.addEventListener('mousedown', (e) => {
@@ -203,7 +211,7 @@ export function mountBookmarkBar(host: HTMLElement, api: ShellBridge): BookmarkB
     else if (e.key === 'End') target = all[all.length - 1]
     else if ((e.key === 'ArrowDown' || e.key === ' ') && nodeOf(n)?.kind === 'folder') {
       e.preventDefault()
-      void openFolder(n)
+      void openFolder(n, undefined, true)
       return
     } else if (e.key === ' ' && n instanceof HTMLAnchorElement) {
       e.preventDefault()

@@ -17,7 +17,8 @@ describe('settings defaults (PLAN 1.4)', () => {
       startup: 'restore',
       downloadsDir: null,
       reducedMotion: false,
-      bookmarkBar: true
+      bookmarkBar: true,
+      dialupSound: false
     })
   })
 
@@ -29,6 +30,15 @@ describe('settings defaults (PLAN 1.4)', () => {
   it('on-disk schema strips unknown keys but rejects wrong types', () => {
     expect(SettingsSchema.parse({ futureKey: 1 })).toEqual(DEFAULT_SETTINGS)
     expect(SettingsSchema.safeParse({ bookmarkBar: 'yes' }).success).toBe(false)
+  })
+
+  it('dialupSound is off by default and settings files from before the extra round still parse (AC55)', () => {
+    const old = { skin: 'y2001', searchEngine: 'google', homePage: 'https://example.org/', startup: 'newtab', downloadsDir: null, reducedMotion: true, bookmarkBar: false }
+    expect(SettingsSchema.parse(old)).toEqual({ ...old, dialupSound: false })
+    expect(SettingsSchema.parse({ dialupSound: true }).dialupSound).toBe(true)
+    expect(SettingsSchema.safeParse({ dialupSound: 'yes' }).success).toBe(false)
+    expect(SettingsPatchSchema.safeParse({ dialupSound: true }).success).toBe(true)
+    expect(SettingsPatchSchema.safeParse({ dialupSound: 1 }).success).toBe(false)
   })
 
   it('defaults are frozen and defaultSettings() returns a copy', () => {

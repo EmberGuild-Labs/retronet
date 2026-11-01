@@ -1,6 +1,8 @@
 // RetroNet main process bootstrap (PLAN 1.3). Order matters:
-//   before ready: userData override (dev/E2E only), privileged scheme, single-instance lock, error logging;
-//   at ready: retronet:// on the default session, default-session lockdown, IPC router, first window.
+//   before ready: userData override (dev/E2E only), privileged scheme, open-url/open-file listeners (macOS sends
+//   cold-launch links before ready), single-instance lock, error logging;
+//   at ready: retronet:// on the default session, default-session lockdown, IPC router, first window, then the
+//   queued links from other apps (AC48).
 // Quit (R2), in this order, once: `before-quit` -> session prepareQuit() (final session save, then frozen) ->
 // await flushAllStores() (bounded) -> app.quit(). `will-quit` does a final sync flush; the watchdog that forces
 // app.exit(0) if a window or renderer hangs does a sync flush first, because app.exit skips will-quit.
@@ -10,11 +12,12 @@ import { registerShellHandlers } from './ipc/shell-handlers'
 import { router } from './ipc/router'
 import { initLogger, logger } from './logger'
 import { createProfileManager } from './profiles/profile-manager'
+import { handleSecondInstanceArgv, hasPendingOpenRequests, installOpenRequestHandlers, markOpenTargetReady } from './os-integration/open-requests'
 import { installRetronetProtocol, registerRetronetSchemePrivileged } from './protocol/retronet-protocol'
 import { installCertErrorHandling } from './security/cert-errors'
 import { installHttpAuth } from './security/http-auth'
 import { installSubresourceGuard, setGuardBlockLogger } from './security/navigation-guards'
-import { auditWebPreferences } from './security/web-prefs'
+import { scheduleWebContentsAudit } from './security/web-prefs'
 import { flushAllStores, flushAllStoresSync } from './storage/json-store'
 import { installTestHooks, recordAudit, recordQuitFlush } from './test-hooks'
 import type { ProfileManager } from './types'
@@ -33,6 +36,7 @@ if (app.isPackaged && ['remote-debugging-port', 'remote-debugging-pipe'].some((s
 
 applyUserDataOverride()
 registerRetronetSchemePrivileged()
+installOpenRequestHandlers()
 initLogger(logsDir(), { console: !app.isPackaged })
 
 process.on('uncaughtException', (err) => logger.error('uncaughtException', err))
@@ -52,7 +56,12 @@ function start(): void {
     windowManager.createWindow({ profile: profiles.lastUsed() })
   }
 
-  app.on('second-instance', () => {
+  // Windows/Linux pass links on the command line; macOS uses open-url/open-file (argv yields nothing there).
+  if (process.platform !== 'darwin') handleSecondInstanceArgv(process.argv, process.cwd())
+
+  app.on('second-instance', (_e, argv, cwd) => {
+    // Links and .html files go through the open-request queue, which picks (or creates) and focuses a window.
+    if (handleSecondInstanceArgv(argv, cwd) > 0) return
     const w = windowManager.focused()
     if (w) {
       if (w.win.isMinimized()) w.win.restore()
@@ -66,9 +75,15 @@ function start(): void {
   app.on('web-contents-created', (_e, wc: WebContents) => {
     wc.on('will-attach-webview', (ev) => ev.preventDefault())
     wc.setWindowOpenHandler(() => ({ action: 'deny' }))
-    const audit = auditWebPreferences(wc)
-    recordAudit(audit, wc.getURL())
-    if (!audit.ok) logger.error(`webPreferences audit failed for webContents ${wc.id} (${audit.type}): ${audit.problems.join(', ')}`)
+    // E2: audited a tick later (registration happens right after construction); unregistered webContents fail.
+    scheduleWebContentsAudit(
+      wc,
+      (w) => router.senderInfo(w) !== undefined,
+      (audit) => {
+        recordAudit(audit, wc.isDestroyed() ? '' : wc.getURL())
+        if (!audit.ok) logger.error(`webPreferences audit failed for webContents ${audit.id} (${audit.type}): ${audit.problems.join(', ')}`)
+      }
+    )
   })
 
   app.on('window-all-closed', () => {
@@ -154,6 +169,8 @@ function start(): void {
     windowManager.onWindowFocused((w) => profiles?.markUsed(w.profile.id))
     installTabFeatures(profiles)
     registerCommands()
-    if (!restoreOnLaunch(profiles)) openWindow()
+    // A cold launch from a link with nothing to restore opens only the link's window, not an extra new tab.
+    if (!restoreOnLaunch(profiles) && !hasPendingOpenRequests()) openWindow()
+    markOpenTargetReady({ profiles })
   })
 }

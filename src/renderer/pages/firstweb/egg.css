@@ -1,0 +1,73 @@
+/* Hidden era page 1 of 4, retronet://firstweb/ (B2). DESIGN-EGGS §2 shared rules + §3.1 "a plain HTML document".
+   Unlayered, so it wins over the y1994 skin's @layer rn-skin without !important. Static on purpose (E-2): there is
+   no motion of any kind on this page, so reduced motion holds by construction. */
+
+/* ---------- shared egg rules (§2) ---------- */
+.rn-egg { max-width: 760px; }
+.rn-egg p, .rn-egg li { max-width: 68ch; }
+.rn-egg__kicker { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rn-fg-muted); }
+.rn-egg__dek { color: var(--rn-fg-muted); text-wrap: pretty; }
+.rn-egg__toc ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.rn-egg__fig { margin: 0 0 16px; }
+.rn-egg__fig img { display: block; max-width: 100%; height: auto; outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }
+.rn-egg__fig figcaption { margin-top: 6px; font-size: 14px; line-height: 1.4; text-wrap: pretty; }
+.rn-egg__caption { display: block; }
+.rn-egg__photo-credit { display: block; font-size: 13px; color: var(--rn-fg-muted); }
+.rn-egg__sources ol, .rn-egg__credits ol { padding-inline-start: 2.25em; }
+.rn-egg__sources li, .rn-egg__credits li { margin-bottom: 8px; line-height: 1.45; }
+.rn-egg__host { color: var(--rn-fg-muted); font-size: 13px; overflow-wrap: anywhere; }
+.rn-egg__host::before { content: "("; }
+.rn-egg__host::after { content: ")"; }
+.rn-egg__disclaimer { font-size: 14px; color: var(--rn-fg-muted); }
+.rn-egg__foot { margin-top: 24px; font-size: 14px; text-align: center; }
+.rn-egg :target { scroll-margin-top: 24px; }
+@media (forced-colors: active) { .rn-egg__fig img { outline: 1px solid CanvasText; } }
+
+/* ---------- 1994 Pioneer (§3.1) ---------- */
+/* One left-aligned document column: 640px of text plus 2 x 24px padding. */
+.rn-egg--y1994 { max-width: 688px; margin-inline: auto; padding: 24px; --rn-fg-muted: #2E323A; } /* centred on wide screens; muted text >= 4.5:1 on the grey page */
+.rn-egg--y1994 .rn-egg__head h1 { margin-bottom: 8px; }
+.rn-egg--y1994 .rn-egg__dek { margin-bottom: 12px; }
+.rn-egg--y1994 .rn-hr { margin: 20px 0; }
+
+/* Contents: label and list on one line, " | " separators are decorative */
+.rn-egg--y1994 .rn-egg__toc { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.rn-egg--y1994 .rn-egg__toc-label { margin: 0; font-weight: 700; }
+.rn-egg--y1994 .rn-egg__toc ul { gap: 4px 0; }
+.rn-egg--y1994 .rn-egg__toc li + li::before { content: "|"; padding-inline: 8px; color: var(--rn-fg-muted); }
+
+/* h2 sits right under a rule, so drop the base top margin */
+.rn-egg--y1994 .rn-egg__subject h2,
+.rn-egg--y1994 .rn-egg__sources h2,
+.rn-egg--y1994 .rn-egg__credits h2 { margin-top: 0; margin-bottom: 12px; }
+.rn-egg--y1994 .rn-egg__kicker { font-family: var(--rn-stack-serif); }
+
+/* HTML 2.0 border=1: a hard 1px edge, because a soft outline vanishes on grey */
+.rn-egg--y1994 .rn-egg__fig img { outline: 1px solid #111318; outline-offset: 0; }
+.rn-egg--y1994 .rn-egg__fig--wide img { width: 100%; }
+.rn-egg--y1994 .rn-egg__fig figcaption { color: #111318; }
+.rn-egg--y1994 .rn-egg__caption { font-style: italic; }
+.rn-egg--y1994 .rn-egg__photo-credit { margin-top: 2px; }
+
+/* The portrait floats right, like align=right */
+.rn-egg--y1994 .rn-egg__subject--float { display: flow-root; }
+.rn-egg--y1994 .rn-egg__fig--float { float: inline-end; width: 192px; margin: 4px 0 12px 20px; }
+.rn-egg--y1994 .rn-egg__fig--float img { width: 192px; }
+
+.rn-egg--y1994 .rn-egg__credits li { margin-bottom: 12px; }
+.rn-egg--y1994 .rn-egg__credit-label { font-weight: 700; }
+.rn-egg--y1994 .rn-egg__license-note { margin: 0; }
+.rn-egg--y1994 .rn-egg__disclaimer { margin: 0; }
+
+/* Reads like an <address> line at the foot of a 1994 document */
+.rn-egg--y1994 .rn-egg__foot { margin-top: 0; font: italic 400 14px/1.4 var(--rn-stack-serif); }
+.rn-egg--y1994 .rn-egg__foot p { max-width: none; margin: 0; }
+
+@media (max-width: 560px) {
+  .rn-egg--y1994 { padding: 16px; }
+  /* a wrapped " | " would start a line on its own: drop the bars and give each link a full 24px row instead */
+  .rn-egg--y1994 .rn-egg__toc ul { gap: 0 16px; }
+  .rn-egg--y1994 .rn-egg__toc li + li::before { content: none; }
+  .rn-egg--y1994 .rn-egg__toc a { display: inline-block; padding-block: 2px; }
+  .rn-egg--y1994 .rn-egg__fig--float { float: none; margin: 0 auto 16px; }
+}

@@ -19,6 +19,8 @@ export interface Settings {
   downloadsDir: string | null
   reducedMotion: boolean
   bookmarkBar: boolean
+  /** AC55: play the original dial-up sound on user-started loads. Off by default. */
+  dialupSound: boolean
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
@@ -28,7 +30,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   startup: 'restore',
   downloadsDir: null,
   reducedMotion: false,
-  bookmarkBar: true
+  bookmarkBar: true,
+  dialupSound: false
 })
 
 const HOME_SCHEMES = new Set(['http:', 'https:', 'retronet:'])
@@ -66,7 +69,8 @@ const fields = {
   startup: z.enum(STARTUP_MODES),
   downloadsDir: z.string().min(1).max(4096).nullable(),
   reducedMotion: z.boolean(),
-  bookmarkBar: z.boolean()
+  bookmarkBar: z.boolean(),
+  dialupSound: z.boolean()
 }
 
 /**
@@ -82,7 +86,8 @@ export const SettingsSchema = z.object({
   startup: fields.startup.default(DEFAULT_SETTINGS.startup),
   downloadsDir: fields.downloadsDir.default(DEFAULT_SETTINGS.downloadsDir),
   reducedMotion: fields.reducedMotion.default(DEFAULT_SETTINGS.reducedMotion),
-  bookmarkBar: fields.bookmarkBar.default(DEFAULT_SETTINGS.bookmarkBar)
+  bookmarkBar: fields.bookmarkBar.default(DEFAULT_SETTINGS.bookmarkBar),
+  dialupSound: fields.dialupSound.default(DEFAULT_SETTINGS.dialupSound)
 })
 
 /** A complete settings object with no extra keys (IPC responses). */

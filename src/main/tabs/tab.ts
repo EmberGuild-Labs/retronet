@@ -8,7 +8,7 @@ import { dialog, WebContentsView, type MessageBoxSyncOptions, type NavigationEnt
 import { SESSION_HISTORY_MAX } from '../../shared/ipc-contract'
 import { NEWTAB_URL } from '../../shared/settings'
 import type { StatusEvent, TabState } from '../../shared/types'
-import { securityStateFor } from '../../shared/url-safety'
+import { securityStateFor, viewSourceInner } from '../../shared/url-safety'
 import { rendererRoot } from '../app-paths'
 import { router } from '../ipc/router'
 import { logger } from '../logger'
@@ -114,10 +114,48 @@ export function zoomOriginOf(url: string): string | null {
   return u.origin && u.origin !== 'null' ? u.origin : null
 }
 
-/** History records real pages only: never retronet:, about:, data: or interstitials. */
+/** Dial-up sound throttle: at most one play per window per this many ms. */
+export const DIALUP_MIN_INTERVAL_MS = 10_000
+
+export interface DialupContext {
+  settingOn: boolean
+  incognito: boolean
+  popup?: boolean
+  /** The load came from Tab.load() with user:true (omnibox, bookmark, home, palette, open-url), not a link, reload, restore or back/forward. */
+  userStarted: boolean
+  /** The address being loaded: only http(s) targets get the dial-up (never file:, retronet:, view-source:). */
+  url: string
+  active: boolean
+  muted: boolean
+  nowMs: number
+  /** When this window last got a dial-up, or null. */
+  lastSentMs: number | null
+}
+
+/** AC55: should this user-started top-level load make the shell play the dial-up sound? */
+export function shouldPlayDialup(c: DialupContext): boolean {
+  const protocol = parse(c.url)?.protocol
+  if (protocol !== 'http:' && protocol !== 'https:') return false
+  if (!c.settingOn || c.incognito || c.popup || !c.userStarted || !c.active || c.muted) return false
+  if (c.lastSentMs !== null && c.nowMs - c.lastSentMs >= 0 && c.nowMs - c.lastSentMs < DIALUP_MIN_INTERVAL_MS) return false
+  return true
+}
+
+const lastDialup = new WeakMap<object, number>()
+
+/** History records real pages only: never retronet:, about:, data: or interstitials (view-source: is not http(s), so it is skipped too). */
 function isHistoryUrl(url: string): boolean {
   const p = parse(url)?.protocol
   return p === 'http:' || p === 'https:' || p === 'file:'
+}
+
+/**
+ * The address a main-frame commit stands for. In a source view Electron's navigation events and history entries
+ * report the INNER URL (SPIKE-X1 §2); only wc.getURL() keeps `view-source:`, so use that for the omnibox,
+ * history (skipped: not http(s)) and the session.
+ */
+export function committedUrlFor(eventUrl: string, wcUrl: string): string {
+  return viewSourceInner(wcUrl) === eventUrl ? wcUrl : eventUrl
 }
 
 // Internal pages get the RetroNet mark as their favicon. Read from the bundle (never fetched through the tab
@@ -365,8 +403,32 @@ export class Tab {
     }
     this.userStarted = opts.user ?? true
     this.pendingUrl = url
+    this.maybeDialup()
     void this.wc.loadURL(url).catch(() => undefined) // failures arrive as did-fail-load
     return true
+  }
+
+  private maybeDialup(): void {
+    try {
+      const w = this.host.window
+      const nowMs = Date.now()
+      const ok = shouldPlayDialup({
+        settingOn: w.profile.stores.settings.get().dialupSound === true,
+        incognito: w.incognito || w.profile.incognito,
+        popup: w.popup,
+        userStarted: this.userStarted,
+        url: this.pendingUrl ?? '',
+        active: this.host.isActive(this),
+        muted: this.wc.isAudioMuted(),
+        nowMs,
+        lastSentMs: lastDialup.get(w) ?? null
+      })
+      if (!ok) return
+      lastDialup.set(w, nowMs)
+      w.sendShell('sound', { kind: 'dialup' })
+    } catch (err) {
+      logger.warn('dialup trigger failed', err)
+    }
   }
 
   /** Reopen-closed: bring back the whole back/forward list. Falls back to loading the active entry. */
@@ -457,7 +519,7 @@ export class Tab {
         ? 'cert-warning'
         : blocked?.kind === 'net' || (alive && this.failed)
           ? 'internal'
-          : securityStateFor(url || NEWTAB_URL, isCertOverridden(ses, url))
+          : securityStateFor(url || NEWTAB_URL, isCertOverridden(ses, viewSourceInner(url) ?? url))
     let bookmarked = false
     try {
       bookmarked = url !== '' && this.host.window.profile.stores.bookmarks.isBookmarked(url)
@@ -508,7 +570,8 @@ export class Tab {
         }
       }
       if (isInterstitialUrl(e.url)) return
-      entries.push({ url: e.url, title: e.title, ...(e.pageState ? { pageState: e.pageState } : {}) })
+      const entryUrl = i === active ? committedUrlFor(e.url, this.url()) : e.url
+      entries.push({ url: entryUrl, title: e.title, ...(e.pageState ? { pageState: e.pageState } : {}) })
     })
     return {
       url,
@@ -533,7 +596,10 @@ export class Tab {
     const active = h.getActiveIndex()
     if (all.length < 2 || active < 0 || active >= all.length || isInterstitialUrl(all[active]!.url)) return { url, title }
     const keep = (e: NavigationEntry): boolean => e.url !== '' && e.url.length <= 8192 && !isInterstitialUrl(e.url)
-    const entries = all.filter(keep).map((e) => ({ url: e.url, title: e.title.slice(0, 1024) }))
+    const wcUrl = this.url()
+    const entries = all
+      .filter(keep)
+      .map((e) => ({ url: e === all[active] ? committedUrlFor(e.url, wcUrl) : e.url, title: e.title.slice(0, 1024) }))
     let index = active - all.slice(0, active).filter((e) => !keep(e)).length
     if (entries.length < 2) return { url, title }
     let start = 0
@@ -629,14 +695,14 @@ export class Tab {
     })
 
     wc.on('did-navigate', (_e, url) => {
-      this.onCommit(url, false)
+      this.onCommit(committedUrlFor(url, wc.getURL()), false)
       if (!this.quiet && !this.failed) this.setStatus(STATUS_WAITING)
       this.host.committed(this)
     })
 
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (!isMainFrame) return
-      this.onCommit(url, true)
+      this.onCommit(committedUrlFor(url, wc.getURL()), true)
       this.host.committed(this)
     })
 

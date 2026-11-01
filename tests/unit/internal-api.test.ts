@@ -116,6 +116,10 @@ describe('registration', () => {
       return c.every((x) => !['shell', 'overlay'].includes(x)) && m !== 'commands.list'
     })
     expect(pageOnly.filter((m) => !h.handlers.has(m))).toEqual([])
+    // Extra round (X2): wired through registerInternalApiHandlers; X8/X9/X10 replace the stub bodies.
+    for (const m of ['defaultBrowser.status', 'defaultBrowser.set', 'bookmarks.import', 'bookmarks.export', 'updates.status', 'updates.check', 'updates.openDownload']) {
+      expect(h.handlers.has(m), m).toBe(true)
+    }
   })
 })
 

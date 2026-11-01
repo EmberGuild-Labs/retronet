@@ -9,7 +9,7 @@ import type {
   WebContents,
   WindowOpenHandlerResponse
 } from 'electron'
-import { navigationSchemeAllowed } from '@shared/url-safety'
+import { navigationSchemeAllowed, viewSourceInner } from '@shared/url-safety'
 import { UI_ONLY_HOSTS, type InternalHost } from '../protocol/retronet-protocol'
 import { requestExternal } from './external-protocols'
 
@@ -92,6 +92,13 @@ export function decideBrowserNavigation(url: string, opts: { typed?: boolean } =
   const u = parse(url)
   if (!u) return 'block'
   if (isUiOnlyHost(u)) return 'block'
+  if (u.protocol === 'view-source:') {
+    // AC54: a source view of an http(s) page only (navigationSchemeAllowed), and the page itself must pass this
+    // guard too. Never typed: a typed file: is not a reason to show a local file's source.
+    const inner = viewSourceInner(url)
+    const ok = navigationSchemeAllowed(url, { browserInitiated: true }) && inner !== null && decideBrowserNavigation(inner) === 'allow'
+    return ok ? 'allow' : 'block'
+  }
   if (navigationSchemeAllowed(url, { browserInitiated: true, typed: opts.typed === true })) return 'allow'
   return isExternalScheme(u) ? 'external' : 'block'
 }
@@ -99,7 +106,8 @@ export function decideBrowserNavigation(url: string, opts: { typed?: boolean } =
 /**
  * A main-frame navigation started by page content (`will-navigate`: links, `location=`, forms).
  * retronet: targets need the current page AND the initiating frame (when known) to be retronet: pages, so an
- * http iframe inside an internal page could not do it either. file: and javascript: are never allowed here.
+ * http iframe inside an internal page could not do it either. file:, javascript: and view-source: are never
+ * allowed here (links inside a source view arrive through the window-open handler as plain http(s) URLs).
  */
 export function decidePageNavigation(
   url: string,
@@ -107,7 +115,7 @@ export function decidePageNavigation(
 ): NavDecision {
   if (ctx.kind === 'ui') return 'block'
   const u = parse(url)
-  if (!u) return 'block'
+  if (!u || u.protocol === 'view-source:') return 'block'
   if (u.protocol === 'retronet:') {
     if (isUiOnlyHost(u)) return 'block'
     const initiatorOk = ctx.initiatorUrl == null || isRetronet(ctx.initiatorUrl)
@@ -130,6 +138,38 @@ export function decideFrameNavigation(url: string, parentUrl: string | null | un
   if (!u) return false
   if (u.protocol === 'retronet:') return !isUiOnlyHost(u) && isRetronet(parentUrl)
   return SUBFRAME_SCHEMES.has(u.protocol)
+}
+
+/**
+ * The built-in PDF viewer (SPIKE-X1 §1). Chromium shows a PDF tab as frames inside the tab's own webContents (no
+ * guest): the PDF frame holds `chrome-extension://<id>/index.html` (browser-initiated, never seen by
+ * will-frame-navigate), which then navigates its own child to `chrome-extension://<id>/<stream uuid>`. That
+ * one renderer-initiated step is all this allows. Compare protocol + host: `URL.origin` is 'null' for this
+ * non-special scheme. Kept in src/main: the id must not appear in src/shared or src/renderer.
+ */
+export const PDF_VIEWER_EXTENSION_ID = 'mhjfbmdgcfjbbpaeojofohoefgiehjai'
+const PDF_VIEWER_INDEX = `chrome-extension://${PDF_VIEWER_EXTENSION_ID}/index.html`
+/** A lowercase UUID, the whole path. */
+const PDF_STREAM_PATH = /^\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+/**
+ * True only for the viewer's stream frame: exact extension id, a UUID path with no query, hash, userinfo or
+ * port, a parent that is exactly the viewer's index.html, and a grandparent (the frame showing the PDF) that
+ * is http(s) or file:. blob:, data:, about: and retronet: PDFs are not shown (manager decision: no blob:).
+ */
+export function decidePdfViewerFrame(
+  url: string,
+  parentUrl: string | null | undefined,
+  grandParentUrl: string | null | undefined
+): boolean {
+  const u = parse(url)
+  if (!u || u.protocol !== 'chrome-extension:' || u.host !== PDF_VIEWER_EXTENSION_ID) return false
+  if (u.username || u.password || u.port || u.search || u.hash || !PDF_STREAM_PATH.test(u.pathname)) return false
+  // Reject a URL the parser had to normalise (e.g. "?" or "#" with nothing after it): match the text exactly.
+  if (url !== `chrome-extension://${PDF_VIEWER_EXTENSION_ID}${u.pathname}`) return false
+  if (parentUrl !== PDF_VIEWER_INDEX) return false
+  const g = parse(grandParentUrl)?.protocol
+  return g === 'http:' || g === 'https:' || g === 'file:'
 }
 
 /** Server redirects (`will-redirect`, any frame) may only go to http(s). Blocks retronet:, file:, javascript:... */
@@ -169,7 +209,8 @@ function wantsPopup(details: Pick<HandlerDetails, 'disposition' | 'features'>): 
  * window.open / target=_blank policy (PLAN 1.7, D4). The shell and overlay never open windows. Web pages may
  * open http(s) and about:blank, as a popup when they pass features, else as a tab (background for
  * background-tab). retronet: targets only from retronet: pages, as a plain tab without an opener. Anything a
- * retronet: page opens is a plain tab without an opener (S10).
+ * retronet: page or a source view (view-source:) opens is a plain tab without an opener (S10, AC54).
+ * view-source: targets are always denied.
  * mailto:/tel:/sms: go to the external prompt; everything else (file:, javascript:, data:, unknown) is denied.
  */
 export function decideWindowOpen(
@@ -189,7 +230,9 @@ export function decideWindowOpen(
   if (!navigationSchemeAllowed(details.url, { currentUrl: ctx.openerUrl })) return { action: 'deny' }
   // S10: a web page opened from an internal page never gets window.opener (no reverse tabnabbing of
   // retronet:// pages, which hold the privileged bridge). Always a plain tab, even when features were passed.
-  if (isRetronet(ctx.openerUrl)) return { action: 'tab', background, withOpener: false }
+  if (isRetronet(ctx.openerUrl) || parse(ctx.openerUrl)?.protocol === 'view-source:') {
+    return { action: 'tab', background, withOpener: false }
+  }
   if (wantsPopup(details)) return { action: 'popup', features: parsePopupFeatures(details.features) }
   return { action: 'tab', background, withOpener: true }
 }
@@ -254,7 +297,11 @@ export function attachNavigationGuards(wc: WebContents, ctx: GuardContext): void
 
   wc.on('will-frame-navigate', (e) => {
     if (e.isMainFrame) return // handled by will-navigate
-    if (ctx.kind === 'ui' || !decideFrameNavigation(e.url, e.frame?.parent?.url ?? null)) {
+    const parent = e.frame?.parent ?? null
+    const ok =
+      ctx.kind === 'tab' &&
+      (decidePdfViewerFrame(e.url, parent?.url, parent?.parent?.url) || decideFrameNavigation(e.url, parent?.url ?? null))
+    if (!ok) {
       e.preventDefault()
       onGuardBlock('will-frame-navigate', logUrl(e.url))
     }

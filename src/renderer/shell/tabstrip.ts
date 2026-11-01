@@ -330,10 +330,21 @@ export function mountTabStrip(el: HTMLElement, api: ShellBridge): TabStripHandle
     const r = n.getBoundingClientRect()
     return { x: Math.round(r.left), y: Math.round(r.bottom) }
   }
-  function openMenu(n: HTMLElement, e?: MouseEvent): void {
+  /** Open the tab/chip menu; the call resolves when it closes, then focus returns to the trigger if it had it. */
+  function openMenu(n: HTMLElement, e?: MouseEvent, keyboard = false): void {
     const at = menuAt(n, e)
-    if (n.dataset.tabId) ignore(api.tabs.contextMenu({ tabId: Number(n.dataset.tabId), ...at }))
-    else if (n.dataset.groupId) ignore(api.groups.contextMenu({ groupId: n.dataset.groupId, ...at }))
+    const r = n.getBoundingClientRect()
+    const extra = { anchor: { x: r.left, y: r.top, width: r.width, height: r.height }, ...(keyboard ? { keyboard: true } : {}) }
+    const hadFocus = n.contains(document.activeElement)
+    let p: Promise<unknown>
+    if (n.dataset.tabId) p = api.tabs.contextMenu({ tabId: Number(n.dataset.tabId), ...at, ...extra })
+    else if (n.dataset.groupId) p = api.groups.contextMenu({ groupId: n.dataset.groupId, ...at, ...extra })
+    else return
+    void p
+      .catch(() => undefined)
+      .finally(() => {
+        if (hadFocus && n.isConnected && !n.contains(document.activeElement)) n.focus({ preventScroll: true })
+      })
   }
   function editGroup(chip: HTMLElement): void {
     const r = chip.getBoundingClientRect()
@@ -440,11 +451,11 @@ export function mountTabStrip(el: HTMLElement, api: ShellBridge): TabStripHandle
       case 'F10':
         if (!e.shiftKey) return
         e.preventDefault()
-        openMenu(n)
+        openMenu(n, undefined, true)
         return
       case 'ContextMenu':
         e.preventDefault()
-        openMenu(n)
+        openMenu(n, undefined, true)
         return
       default:
         return

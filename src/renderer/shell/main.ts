@@ -14,6 +14,8 @@ import { createStatusBar } from './statusbar'
 import { createFindBar } from './findbar'
 import { mountTabStrip } from './tabstrip'
 import { mountBookmarkBar } from './bookmarkbar'
+import { createDialup } from './dialup'
+import { initShellEggs } from './eggs'
 import './shell.css'
 
 // Skin first, before anything paints (T9 handoff).
@@ -44,6 +46,7 @@ mountTabStrip(tabsHost, api)
 mountBookmarkBar(bookmarksHost, api)
 
 document.body.replaceChildren(frame)
+initShellEggs(api)
 
 // ---- skin-dependent markup ----
 
@@ -127,6 +130,29 @@ api.on('find', (ev) => findbar.event(ev))
 api.on('ui', (ev) => {
   if (ev.action === 'focus-omnibox') omnibox.focus()
   else if (ev.action === 'omnibox-picked') omnibox.picked()
+})
+
+// ---- dial-up sound (AC55) ----
+// Test hook: `?soundGain=0` on the shell URL silences the output. The AudioContext is created lazily on the first event.
+// R32 (won't fix, D-C2): this seam also exists in packaged builds, but no page can reach it. Only main sets the shell
+// URL, and lockUiWebContents blocks every page-initiated navigation of the shell, so nothing else can add ?soundGain.
+const soundGainParam = Number(new URLSearchParams(location.search).get('soundGain'))
+const dialup = createDialup({
+  outputGain: new URLSearchParams(location.search).has('soundGain') && Number.isFinite(soundGainParam) ? soundGainParam : 1
+})
+api.on('sound', (ev) => {
+  if (ev.kind === 'dialup') dialup.play()
+})
+// Stop: the toolbar Stop button and Escape (the shell-side stop paths) fade the sound out.
+document.addEventListener(
+  'click',
+  (ev) => {
+    if ((ev.target as HTMLElement | null)?.closest?.('.rn-toolbar [data-action="stop"]')) dialup.stop()
+  },
+  true
+)
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') dialup.stop()
 })
 
 // Local fallbacks for when focus is in the shell itself (main's shortcut handler covers web content).

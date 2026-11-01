@@ -43,6 +43,16 @@ export interface LaunchOptions {
   env?: Record<string, string>
   /** Wait for a window whose active tab finished loading (default true). */
   waitReady?: boolean
+  /**
+   * The gated RETRONET_TEST_* overrides (honoured only unpackaged + RETRONET_E2E=1): the default-browser fake
+   * (AC47) and a loopback update feed (AC52, AC53).
+   */
+  overrides?: { defaultBrowser?: 'fake'; updateFeed?: string }
+  /**
+   * Links/files "opened from another app" before the app is ready (AC48): emitted from will-finish-launching by
+   * pre-open.cjs. Playwright drops NODE_OPTIONS, so the script goes in as a second `-r`.
+   */
+  preOpen?: Array<{ kind: 'url' | 'file'; value: string }>
 }
 
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -63,7 +73,7 @@ export function readJson<T = any>(file: string): T | null {
   }
 }
 
-export const SKIN_IDS = ['y1994', 'y1997', 'y2001'] as const
+export const SKIN_IDS = ['y1994', 'y1997', 'y1999', 'y2001'] as const
 export const GROUP_COLORS = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'] as const
 
 /** Poll `fn` until it returns a truthy value; throws with `what` (and the last value) on timeout. */
@@ -295,6 +305,31 @@ export class RN {
     await this.js(w.shellId, `(window.__rnEv = [], true)`)
   }
 
+  /**
+   * AC55 under test: the dial-up sound must stay silent. The shell builds its AudioContext lazily on the first
+   * sound event, so swapping the constructor for an OfflineAudioContext (renders nothing audible) keeps every
+   * play silent while the player still runs and bumps `.rn-frame[data-sound-plays]`.
+   */
+  async silenceShell(windowId?: number): Promise<void> {
+    const w = await this.win(windowId)
+    await this.js(w.shellId, `(() => { const Off = window.OfflineAudioContext; window.AudioContext = function () { return new Off(1, 44100 * 4, 44100) }; window.webkitAudioContext = window.AudioContext; return true })()`)
+  }
+
+  /** `.rn-frame[data-sound-plays]` in the window's shell (0 when never played). */
+  async soundPlays(windowId?: number): Promise<number> {
+    const w = await this.win(windowId)
+    return this.js<number>(w.shellId, `Number(document.querySelector('.rn-frame')?.dataset.soundPlays ?? '0')`)
+  }
+
+  /** Answer the next native open/save dialog (test hook `__rnDialogs`; empty queue = cancel). */
+  queueDialog(kind: 'open' | 'save', path: string | null): Promise<void> {
+    return this.main((_e, a: { kind: 'open' | 'save'; path: string | null }) => (globalThis as any).__rnDialogs.queue(a.kind, a.path), { kind, path })
+  }
+
+  dialogCalls(): Promise<Array<{ kind: 'open' | 'save'; title: string | null; answered: string | null }>> {
+    return this.main(() => (globalThis as any).__rnDialogs.calls())
+  }
+
   profiles<R = unknown>(fn: string, ...args: unknown[]): Promise<R> {
     return this.main(async (_e, a: { fn: string; args: unknown[] }) => await (globalThis as any).__rnProfiles[a.fn](...a.args), { fn, args }) as Promise<R>
   }
@@ -349,23 +384,66 @@ export function tempDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix))
 }
 
+/**
+ * PLAN-FINAL §0 safety net, installed on every launch: nothing native may reach the user's screen or other apps, even
+ * if a test forgets its own stub. A native menu popup is recorded (`__rnNative.popups`) and closed at once (its
+ * callback runs, as on dismissal); shell.openExternal / openPath / showItemInFolder are recorded and never reach the
+ * OS (no default browser, mail app or Finder window); shell.beep is silent. Specs that need their own stubs (menus,
+ * security) still replace these after launch.
+ */
+async function installNativeSafetyNet(rn: RN): Promise<void> {
+  await rn.main(({ Menu, shell }) => {
+    const g = globalThis as any
+    g.__rnNative = { popups: 0, external: [] as string[], paths: [] as string[] }
+    Menu.prototype.popup = function (opts?: { callback?: () => void }) {
+      g.__rnNative.popups++
+      setTimeout(() => opts?.callback?.(), 0)
+    }
+    ;(shell as any).openExternal = async (url: string) => {
+      g.__rnNative.external.push(String(url))
+    }
+    ;(shell as any).openPath = async (p: string) => {
+      g.__rnNative.paths.push(String(p))
+      return ''
+    }
+    ;(shell as any).showItemInFolder = (p: string) => {
+      g.__rnNative.paths.push(String(p))
+    }
+    ;(shell as any).beep = () => undefined
+  })
+}
+
 export async function launchApp(opts: LaunchOptions = {}): Promise<RN> {
   const userData = opts.userData ?? tempDir('rn-e2e-ud-')
   const downloadsDir = opts.downloadsDir ?? tempDir('rn-e2e-dl-')
+  const env: Record<string, string> = {
+    ...(process.env as Record<string, string>),
+    RETRONET_E2E: '1',
+    RETRONET_USER_DATA: userData,
+    RETRONET_DOWNLOADS_DIR: downloadsDir
+  }
+  // Never inherit a debugging opt-out or a stray override from the caller's shell.
+  delete env.RETRONET_E2E_SHOW
+  delete env.RETRONET_TEST_DEFAULT_BROWSER
+  delete env.RETRONET_TEST_UPDATE_FEED
+  if (opts.overrides?.defaultBrowser) env.RETRONET_TEST_DEFAULT_BROWSER = opts.overrides.defaultBrowser
+  if (opts.overrides?.updateFeed) env.RETRONET_TEST_UPDATE_FEED = opts.overrides.updateFeed
+  const pre: string[] = []
+  if (opts.preOpen) {
+    env.RETRONET_E2E_PRE_OPEN = JSON.stringify(opts.preOpen)
+    pre.push('-r', join(__dirname, 'pre-open.cjs'))
+  }
+  Object.assign(env, opts.env ?? {})
   const app = await _electron.launch({
-    args: [...(opts.switches ?? []), ROOT],
+    // quiet-errors.cjs: no native crash dialogs on the user's screen during automated runs.
+    args: ['-r', join(__dirname, 'quiet-errors.cjs'), ...pre, ...(opts.switches ?? []), ROOT],
     cwd: ROOT,
-    env: {
-      ...(process.env as Record<string, string>),
-      RETRONET_E2E: '1',
-      RETRONET_USER_DATA: userData,
-      RETRONET_DOWNLOADS_DIR: downloadsDir,
-      ...(opts.env ?? {})
-    },
+    env,
     timeout: 30_000
   })
   const rn = new RN(app, userData, downloadsDir)
   await poll(() => app.evaluate(() => !!(globalThis as any).__rn && !!(globalThis as any).__rnProfiles), 'test hooks')
+  await installNativeSafetyNet(rn)
   if (opts.waitReady !== false) await rn.waitWindowReady()
   return rn
 }

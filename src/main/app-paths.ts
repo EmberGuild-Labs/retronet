@@ -52,3 +52,11 @@ export function rendererRoot(): string {
 export function testHooksEnabled(): boolean {
   return !app.isPackaged && process.env.RETRONET_E2E === '1'
 }
+
+/**
+ * Automated test runs (unpackaged + RETRONET_E2E=1) keep every window hidden and never activate the app,
+ * so test runs don't take over the user's screen or focus. RETRONET_E2E_SHOW=1 shows windows for debugging.
+ */
+export function backgroundTestMode(): boolean {
+  return testHooksEnabled() && process.env.RETRONET_E2E_SHOW !== '1'
+}

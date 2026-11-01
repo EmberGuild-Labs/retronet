@@ -8,17 +8,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TRADEMARK_RE } from './trademark-words.mjs'
+import { blankAllowed } from './trademark-allow.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const rel = (p) => path.relative(root, p).split(path.sep).join('/')
 
-
-// Narrow allowlist: security code that must name these URL schemes to BLOCK them. Each entry is file-scoped and
-// token-scoped; the matched token is blanked before the trademark scan. Never add branding or UI strings here.
-const ALLOW = [
-  { file: /^src\/shared\/omnibox\.ts$/, token: /(['"])chrome(-extension|-untrusted)?\1/g, why: 'blocked URL schemes list' },
-  { file: /^src\/(shared|renderer)\/.*\.ts$/, token: /\bprocess\.versions\.chrome\b|\bversions\.chrome\b/g, why: 'nominative engine version on the About page' },
-]
+// The narrow, file- and token-scoped allowlist lives in trademark-allow.mjs (D-B4) so it can be unit-tested.
 
 const SCAN_DIRS = ['src/renderer', 'src/shared', 'build']
 const SKIP_DIRS = new Set(['node_modules', '.git', 'out', 'dist'])
@@ -66,8 +61,7 @@ for (const abs of files) {
   const g = new RegExp(TRADEMARK_RE.source, 'gi')
   if (g.test(path.basename(r))) errors.push(`trademark word in file name: ${r}`)
   if (!TEXT_EXT.has(path.extname(r).toLowerCase())) continue
-  let text = fs.readFileSync(abs, 'utf8')
-  for (const a of ALLOW) if (a.file.test(r)) text = text.replace(a.token, (m) => ' '.repeat(m.length))
+  const text = blankAllowed(r, fs.readFileSync(abs, 'utf8'))
   scanned++
   text.split('\n').forEach((line, i) => {
     const m = line.match(TRADEMARK_RE)

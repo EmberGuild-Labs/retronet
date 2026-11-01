@@ -13,7 +13,8 @@ fieldset.rn-fieldset > legend { margin-bottom: var(--rn-space-2); }
 .rn-st__row > .rn-check { flex: 0 1 auto; }
 .rn-st__help { display: block; margin-top: var(--rn-space-1); }
 .rn-st__inline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rn-space-4); }
-.rn-st__select { min-width: 220px; max-width: 100%; }
+.rn-field > .rn-label { display: block; margin-bottom: var(--rn-space-2); }
+.rn-st__inline > .rn-select, .rn-st__range > .rn-select { max-width: 100%; }
 .rn-st__saved { min-height: 1em; }
 .rn-st__saved:empty { display: none; }
 fieldset > .rn-st__saved, .rn-st__section > .rn-st__saved { display: block; margin-top: var(--rn-space-2); }
@@ -69,3 +70,17 @@ fieldset > .rn-st__saved:empty, .rn-st__section > .rn-st__saved:empty { display:
 /* y1994's skin colours nav links with --rn-link, which also wins on the selected row (navy on navy).
    Page-local fix until the skin sheet is updated (FIX-GAPS). */
 .rn-settings__nav a[aria-current] { color: var(--rn-selection-fg); text-decoration: none; }
+
+/* X13: skin cards stay 4-up, or 2x2 when narrow (never 3+1). Decided by the content column, not the viewport. */
+.rn-settings__content { container-type: inline-size; }
+.rn-settings__content .rn-radio-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 700px) { .rn-settings__content .rn-radio-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .rn-settings__content .rn-radio-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--rn-space-4); } }
+.rn-radio-card img { margin-inline: auto; }
+
+/* X13: default-browser status line */
+.rn-st__status { display: flex; align-items: center; gap: var(--rn-space-3); margin: 0 0 var(--rn-space-4); font: var(--rn-font-ui); color: var(--rn-fg); }
+.rn-st__status .rn-icon { flex: none; width: 16px; height: 16px; }
+.rn-st__status--ok .rn-icon { color: var(--rn-secure-fg); }
+.rn-st__status--muted { color: var(--rn-fg-muted); }
+.rn-st__inline[hidden], .rn-btn[hidden] { display: none; }

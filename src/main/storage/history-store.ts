@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { HistoryEntrySchema } from '../../shared/ipc-contract'
 import type { HistoryEntry } from '../../shared/types'
 import { createJsonStore, type JsonStore } from './json-store'
-import { stripUrlCredentials } from './url-credentials'
+import { stripTitleCredentials, stripUrlCredentials } from './url-credentials'
 
 export const HISTORY_MAX_ENTRIES = 30_000
 export const HISTORY_MAX_AGE_MS = 90 * 24 * 3600 * 1000
@@ -116,7 +116,7 @@ export function createHistoryStore(file: string | null, opts: { now?: () => numb
   return {
     recordVisit(rawUrl, title, at = now()) {
       const url = stripUrlCredentials(rawUrl)
-      const entry: HistoryEntry = { id: store.get().nextId, url, title, visitedAt: at }
+      const entry: HistoryEntry = { id: store.get().nextId, url, title: stripTitleCredentials(title, rawUrl), visitedAt: at }
       store.update((d) => {
         d.entries.push(entry)
         d.nextId = entry.id + 1
@@ -128,6 +128,7 @@ export function createHistoryStore(file: string | null, opts: { now?: () => numb
     },
     updateTitle(rawUrl, title) {
       const url = stripUrlCredentials(rawUrl)
+      title = stripTitleCredentials(title, rawUrl)
       const entries = store.get().entries
       for (let i = entries.length - 1; i >= 0; i--) {
         if (entries[i]!.url === url) {

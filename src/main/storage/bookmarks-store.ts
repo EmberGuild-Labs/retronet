@@ -2,9 +2,24 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { BookmarkFolderSchema } from '../../shared/ipc-contract'
 import { BOOKMARK_BAR_ID, BOOKMARK_OTHER_ID } from '../../shared/types'
+import { BookmarkUrlSchema } from '../../shared/ipc-contract'
 import type { BookmarkFolder, BookmarkNode } from '../../shared/ipc-contract'
+import type { ImportNode } from '../bookmarks/netscape'
 import { createJsonStore, type JsonStore } from './json-store'
 import { stripUrlCredentials } from './url-credentials'
+
+/** Store-wide bookmark cap; an import stops adding at this many (X9). */
+export const MAX_STORE_BOOKMARKS = 50_000
+
+export interface ImportFolderResult {
+  folderId: string
+  folderTitle: string
+  added: number
+  duplicates: number
+  /** Dropped by the store's own address check (the parser already filters schemes). */
+  unsupported: number
+  truncated: boolean
+}
 
 type Bookmark = Extract<BookmarkNode, { kind: 'bookmark' }>
 
@@ -38,6 +53,14 @@ export interface BookmarksStore {
   /** First n bookmarks in bar-then-other depth-first order (new tab page). */
   top(limit?: number): Bookmark[]
   suggest(prefix: string, limit?: number): BookmarkSuggestion[]
+  /** Every stored bookmark address (credential-free), for dedupe. */
+  allUrls(): Set<string>
+  /**
+   * Import parsed nodes into a new folder under Other bookmarks, as ONE mutation (one change event). `title` becomes
+   * "title (2)", "(3)"... when taken. URLs already stored, or repeated within `nodes`, count as duplicates; the store
+   * stops at MAX_STORE_BOOKMARKS (truncated). Adding nothing creates no folder: `added` is 0, `folderId` is the Other root.
+   */
+  importFolder(title: string, nodes: readonly ImportNode[]): ImportFolderResult
   readonly store: JsonStore<BookmarkData>
 }
 
@@ -188,6 +211,52 @@ export function createBookmarksStore(file: string | null, opts: { now?: () => nu
         }
       }
       return out
+    },
+    allUrls() {
+      const out = new Set<string>()
+      for (const n of all()) if (n.kind === 'bookmark') out.add(n.url)
+      return out
+    },
+    importFolder(title, nodes) {
+      const taken = new Set(store.get().other.children.filter((c) => c.kind === 'folder').map((c) => c.title))
+      let folderTitle = title
+      for (let n = 2; taken.has(folderTitle); n++) folderTitle = `${title} (${n})`
+      // One traversal of the existing tree: known addresses and the running count together (R28).
+      const seen = new Set<string>()
+      let count = 0
+      for (const n of all()) {
+        if (n.kind !== 'bookmark') continue
+        seen.add(n.url)
+        count++
+      }
+      const res: ImportFolderResult = { folderId: randomUUID(), folderTitle, added: 0, duplicates: 0, unsupported: 0, truncated: false }
+      const at = now()
+      const build = (src: readonly ImportNode[], depth: number): BookmarkNode[] => {
+        const out: BookmarkNode[] = []
+        for (const n of src) {
+          if (n.kind === 'folder') {
+            if (depth >= 64) continue
+            out.push({ id: randomUUID(), kind: 'folder', title: n.title, createdAt: n.addedAt ?? at, children: build(n.children, depth + 1) })
+            continue
+          }
+          const url = stripUrlCredentials(n.url)
+          if (!BookmarkUrlSchema.safeParse(url).success) { res.unsupported++; continue }
+          if (seen.has(url)) { res.duplicates++; continue }
+          if (count >= MAX_STORE_BOOKMARKS) { res.truncated = true; continue }
+          seen.add(url)
+          count++
+          res.added++
+          out.push({ id: randomUUID(), kind: 'bookmark', title: n.title, url, faviconDataUrl: null, createdAt: n.addedAt ?? at })
+        }
+        return out
+      }
+      const children = build(nodes, 0)
+      // R23: nothing added -> no folder; folderId then names the "Other Bookmarks" root, which always exists.
+      if (res.added === 0) return { ...res, folderId: BOOKMARK_OTHER_ID }
+      store.update(() => {
+        store.get().other.children.push({ id: res.folderId, kind: 'folder', title: folderTitle, createdAt: at, children })
+      })
+      return res
     },
     store
   }

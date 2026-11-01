@@ -2,6 +2,8 @@
 // Other shell methods (groups, omnibox, find, commands, menus) are registered by their own modules via
 // `router.handle`, never here (PLAN 4).
 import { logger } from '../logger'
+import { registerMenuHostHandlers } from '../menus/menu-host'
+import { takeEggHint } from '../omnibox'
 import { browserTabs, type BrowserTabManager, type Tab } from '../tabs/tab-manager'
 import { markTiming, timings } from '../test-hooks'
 import type { WindowContext } from '../types'
@@ -62,6 +64,8 @@ function registerTabHandlers(): void {
 
   router.handle('tabs.navigate', (req, ctx) => {
     if (req.tabId !== undefined) tabOf(ctx, req.tabId)
+    // ↓ + Enter on the y2001 "wiki wiki" hint row opens the egg like eggs.open (DESIGN-EGGS 4.1), not a typed nav.
+    if (takeEggHint(windowOf(ctx), req.input)) return { blocked: false }
     const ok = tabsOf(ctx).navigate(req.input, { tabId: req.tabId, disposition: req.disposition })
     return { blocked: !ok }
   })
@@ -94,6 +98,7 @@ function registerTabHandlers(): void {
 
 export function registerShellHandlers(): void {
   registerTabHandlers()
+  registerMenuHostHandlers()
 
   router.handle('layout.setInsets', (req, ctx) => {
     windowManager.setInsets(windowOf(ctx).id, req)

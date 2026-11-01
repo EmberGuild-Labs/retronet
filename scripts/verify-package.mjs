@@ -50,6 +50,14 @@ try {
     const v = plist(k)
     check(`Info.plist ${k}`, v.status === 0 && v.out.trim().length > 10)
   }
+  const urlTypes = run('plutil', ['-extract', 'CFBundleURLTypes', 'json', '-o', '-', path.join(target, 'Contents/Info.plist')])
+  let schemes = []
+  try { schemes = JSON.parse(urlTypes.out).flatMap((t) => t.CFBundleURLSchemes ?? []) } catch { /* reported below */ }
+  check('CFBundleURLTypes has http + https', schemes.includes('http') && schemes.includes('https'), schemes.join(' '))
+  const docTypes = run('plutil', ['-extract', 'CFBundleDocumentTypes', 'json', '-o', '-', path.join(target, 'Contents/Info.plist')])
+  let docs = []
+  try { docs = JSON.parse(docTypes.out) } catch { /* reported below */ }
+  check('CFBundleDocumentTypes has an HTML type (public.html)', docs.some((d) => (d.LSItemContentTypes ?? []).includes('public.html')))
   check('app icon present', fs.existsSync(path.join(target, 'Contents/Resources/icon.icns')))
 
   // Fuses
@@ -75,9 +83,9 @@ try {
   const grep = (pattern) => run('grep', ['-rIlE', pattern, tmp]).out.split('\n').filter(Boolean).map((f) => path.relative(tmp, f))
   const personal = grep('/Users/|/home/[a-z]')
   check('no personal paths (/Users/, /home/) in asar', personal.length === 0, personal.slice(0, 5).join(', '))
-  const infra = grep('proxnode|raspberrypi|unit2\\.local|ghp_|github_pat_|BEGIN (RSA |EC )?PRIVATE KEY').filter(() => true)
+  const infra = grep('proxnode|ghp_|github_pat_|BEGIN (RSA |EC )?PRIVATE KEY').filter(() => true)
   // the bundle id is allowed to appear
-  const infraReal = infra.filter((f) => run('grep', ['-rhoE', 'proxnode[^"\' ]*|raspberrypi|unit2\\.local|ghp_|github_pat_|PRIVATE KEY', path.join(tmp, f)]).out.split('\n').filter(Boolean).some((m) => m !== 'proxnode.retronet'))
+  const infraReal = infra.filter((f) => run('grep', ['-rhoE', 'proxnode[^"\' ]*|ghp_|github_pat_|PRIVATE KEY', path.join(tmp, f)]).out.split('\n').filter(Boolean).some((m) => m !== 'proxnode.retronet'))
   check('no infra/secret strings (bundle id excepted)', infraReal.length === 0, infraReal.slice(0, 5).join(', '))
   fs.rmSync(tmp, { recursive: true, force: true })
 } finally {

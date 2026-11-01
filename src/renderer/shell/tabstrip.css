@@ -18,6 +18,7 @@
    rules out-rank the base pinned rule, so restate it here. */
 .rn-tabstrip .rn-tab.rn-tab--pinned { flex: 0 0 36px; width: 36px; min-width: 36px; max-width: 36px; }
 :root[data-skin="y2001"] .rn-tabstrip .rn-tab.rn-tab--pinned { flex-basis: 40px; width: 40px; min-width: 40px; max-width: 40px; }
+:root[data-skin="y1999"] .rn-tabstrip .rn-tab.rn-tab--pinned { flex-basis: 38px; width: 38px; min-width: 38px; max-width: 38px; }
 .rn-tabstrip__tabs:focus-within { scroll-padding-inline: 24px; }
 
 /* the drop indicator is positioned with a transform from the scroller's left edge */
@@ -59,8 +60,8 @@
 
 /* 2001 icons are full-colour art; on a group chip the chevron must follow the chip's label colour
    (white on dark fills, near-black on yellow/cyan/orange) to stay visible. */
-:root[data-skin="y2001"] .rn-group-chip .rn-icon { filter: brightness(0) invert(1); }
-:root[data-skin="y2001"] .rn-group-chip:is([data-color="yellow"], [data-color="cyan"], [data-color="orange"]) .rn-icon { filter: brightness(0); }
+:root:is([data-skin="y2001"], [data-skin="y1999"]) .rn-group-chip .rn-icon { filter: brightness(0) invert(1); }
+:root:is([data-skin="y2001"], [data-skin="y1999"]) .rn-group-chip:is([data-color="yellow"], [data-color="cyan"], [data-color="orange"]) .rn-icon { filter: brightness(0); }
 .rn-bookmarkbar__more { flex: none; min-width: 24px; padding-inline: var(--rn-space-2); }
 /* bar items keep their natural width (titles truncate at the skin's max-width); overflow goes to the » menu */
 .rn-bookmarkbar__items > .rn-bookmarkbar__item { flex: none; }

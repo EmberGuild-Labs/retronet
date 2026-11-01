@@ -12,6 +12,18 @@ import {
   type Platform
 } from '../../shared/commands'
 import { SKINS, type SkinId } from '../../shared/skins'
+import { displayUrl, isWebViewSource } from '../../shared/url-safety'
+
+/**
+ * AC54: the one place that turns a page URL into its view-source target (null = not viewable: only http(s)
+ * pages qualify). Dispatch and the context menu both go through this, so switching the target (native
+ * `view-source:` vs an internal source page) is a change to this function alone.
+ */
+export function viewSourceUrlFor(url: string): string | null {
+  const target = `view-source:${url}`
+  // One rule for "viewable" (isWebViewSource), and the inner userinfo never reaches the tab URL (AC73).
+  return isWebViewSource(target) ? displayUrl(target) : null
+}
 
 export interface MenuModel {
   platform: Platform
@@ -23,6 +35,8 @@ export interface MenuModel {
   bookmarkBar: boolean
   /** Unpackaged builds only: items to inspect the shell and overlay. */
   devUi: boolean
+  /** URL of the focused window's active tab (drives "View Page Source"); omitted = unknown, item stays enabled. */
+  activeUrl?: string
 }
 
 export interface MenuActions {
@@ -96,7 +110,10 @@ export function buildMenuTemplate(model: MenuModel, actions: MenuActions): Item[
     (id) => cmd(id)
   )
 
-  const developer: Item[] = [...cmd('devtools.toggle')]
+  const developer: Item[] = [
+    ...cmd('page.viewSource', model.activeUrl === undefined ? {} : { enabled: viewSourceUrlFor(model.activeUrl) !== null }),
+    ...cmd('devtools.toggle')
+  ]
   if (model.devUi && actions.inspectUi) {
     const inspect = actions.inspectUi
     developer.push(sep, { id: 'dev.inspectShell', label: 'Inspect browser UI', click: () => inspect('shell') })

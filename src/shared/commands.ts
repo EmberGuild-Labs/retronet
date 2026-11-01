@@ -188,6 +188,14 @@ const DEFS = [
     accelerator: combine(perPlatform('Cmd+Alt+I', 'Ctrl+Shift+I'), accel('F12')),
     palette: true
   },
+  // AC54: view-source:<url> in a new tab next to the active one (http(s) pages only; no-op elsewhere).
+  {
+    id: 'page.viewSource',
+    title: 'View page source',
+    category: 'Tools',
+    accelerator: perPlatform('Cmd+Alt+U', 'Ctrl+U'),
+    palette: true
+  },
   {
     id: 'data.clear',
     title: 'Clear browsing data',

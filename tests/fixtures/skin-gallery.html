@@ -4,7 +4,7 @@
   Serve the repo root over HTTP (mask-image needs a real origin), e.g.
     python3 -m http.server 8765    then open
     http://localhost:8765/tests/fixtures/skin-gallery.html?skin=y1997
-  Query: skin=y1994|y1997|y2001  incognito=1  reduced=1  surface=shell|page  page=newtab|history|settings|downloads|bookmarks|certerror|neterror
+  Query: skin=y1994|y1997|y1999|y2001  incognito=1  reduced=1  surface=shell|page  page=newtab|history|settings|downloads|bookmarks|certerror|neterror
          loading=1 (throbber + tab spinner)  platform=darwin|win32
   The bar at the top switches skins live (same swap as src/renderer/common/skin-loader.ts) without reloading.
 -->
@@ -21,7 +21,7 @@
   .gx-section { padding: 16px; }
   .gx-h { font: 700 11px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: #666; margin: 0 0 8px; }
   .gx-row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
-  .gx-frame { width: 1180px; height: 560px; border: 1px solid #000; }
+  .gx-frame { width: min(1180px, calc(100vw - 34px)); height: 560px; border: 1px solid #000; }
   .gx-frame .rn-frame { height: 100%; }
   .gx-frame iframe { border: 0; width: 100%; height: 100%; display: block; }
   .gx-overlays { background: #8a8f99; }
@@ -36,6 +36,7 @@
   <strong>Skin gallery</strong>
   <button data-skin="y1994">1994 Pioneer</button>
   <button data-skin="y1997">1997 Comet</button>
+  <button data-skin="y1999">1999 Gumdrop</button>
   <button data-skin="y2001">2001 Horizon</button>
   <label><input type="checkbox" id="gx-incog"> incognito</label>
   <label><input type="checkbox" id="gx-reduced"> reduced motion</label>
@@ -148,6 +149,14 @@ function toolbar(skin) {
       btn('rn-btn--labeled', 'Back', 'back', back), btn('rn-btn--labeled', 'Forward', 'forward', fwd), btn('rn-btn--labeled', 'Reload', 'reload'),
       btn('rn-btn--labeled', 'Home', 'home'), btn('rn-btn--labeled', 'Find', 'find'), btn('rn-btn--labeled', 'Saves', 'download'), btn('rn-btn--labeled', 'Stop', 'stop', stop), ...right)
   }
+  if (skin === 'y1999') {
+    const a = (name, ic, label, extra = {}) => iconBtn(ic, label, { 'data-action': name, ...extra })
+    const sep = () => h('span', { class: 'rn-toolbar__sep', 'aria-hidden': 'true' })
+    return h('div', { class: 'rn-toolbar' },
+      a('back', 'back', 'Back', back), a('forward', 'forward', 'Forward', fwd), sep(),
+      a('reload', 'reload', 'Reload'), a('stop', 'stop', 'Stop', stop), a('home', 'home', 'Home'), sep(),
+      a('find', 'find', 'Find'), a('downloads', 'download', 'Downloads'), ...right)
+  }
   if (skin === 'y2001') {
     return h('div', { class: 'rn-toolbar' },
       btn('rn-btn--round', 'Back', 'back', back), h('button', { class: 'rn-btn rn-btn--round', type: 'button', 'aria-label': 'Forward', disabled: true }, icon('forward')),
@@ -160,7 +169,7 @@ function toolbar(skin) {
     btn('rn-btn--labeled', 'Home', 'home'), btn('rn-btn--labeled', 'Stop', 'stop', stop), btn('rn-btn--labeled', 'Find', 'find'), ...right)
 }
 function locationbar(skin) {
-  const label = { y1994: 'URL:', y1997: 'Location:', y2001: 'Address' }[skin]
+  const label = { y1994: 'URL:', y1997: 'Location:', y1999: 'Web address', y2001: 'Address' }[skin]
   return h('div', { class: 'rn-locationbar' },
     skin === 'y1997' && h('button', { class: 'rn-btn', type: 'button', 'aria-haspopup': 'menu' }, icon('bookmark'), h('span', { class: 'rn-btn__label', text: 'Bookmarks' }), icon('chevron-down')),
     h('label', { class: 'rn-omnibox__label', for: 'gx-omni', text: label }),
@@ -168,7 +177,7 @@ function locationbar(skin) {
       h('button', { class: 'rn-omnibox__security', type: 'button', 'aria-label': 'Secure connection' }, icon('lock')),
       h('input', { class: 'rn-omnibox__input', id: 'gx-omni', role: 'combobox', 'aria-expanded': 'false', value: 'https://example.org/retro/index.html', placeholder: 'Search or enter address', spellcheck: 'false' }),
       h('button', { class: 'rn-btn rn-btn--icon rn-omnibox__star', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Bookmark this page' }, icon('bookmark'))),
-    skin === 'y2001' && h('button', { class: 'rn-btn rn-btn--go', type: 'button' }, icon('go'), h('span', { class: 'rn-btn__label', text: 'Go' })))
+    (skin === 'y2001' || skin === 'y1999') && h('button', { class: 'rn-btn rn-btn--go', type: 'button' }, icon('go'), h('span', { class: 'rn-btn__label', text: 'Go' })))
 }
 function bookmarkbar(skin) {
   const item = (t, i) => h('a', { class: 'rn-bookmarkbar__item', href: '#' }, icon(i), h('span', { text: t }))
@@ -185,10 +194,12 @@ function findbar(nomatch) {
     iconBtn('chevron-up', 'Previous match'), iconBtn('chevron-down', 'Next match'), iconBtn('close', 'Close find bar'))
 }
 function statusbar(error) {
+  const lamp = h('div', { class: 'rn-statusbar__pane rn-statusbar__security', title: 'Secure connection' }, icon('lock'))
+  const text = h('div', { class: 'rn-statusbar__pane rn-statusbar__text', 'data-error': error ? 'true' : 'false', text: error ? 'Error: host not found.' : loading ? 'Transferring data from example.org...' : 'Document: Done.' })
+  const late = root.dataset.skin === 'y1999' || root.dataset.skin === 'y2001'
   return h('div', { class: 'rn-statusbar' },
-    h('div', { class: 'rn-statusbar__pane rn-statusbar__security', title: 'Secure connection' }, icon('lock')),
-    h('div', { class: 'rn-statusbar__pane rn-statusbar__text', 'data-error': error ? 'true' : 'false', text: error ? 'Error: host not found.' : loading ? 'Transferring data from example.org...' : 'Document: Done.' }),
-    h('div', { class: 'rn-statusbar__pane rn-statusbar__progress', hidden: !loading }, h('span', { class: 'rn-progress' }, h('span', { class: 'rn-progress__fill gx-p60' }))),
+    late ? text : lamp, late ? lamp : text,
+    h('div', { class: 'rn-statusbar__pane rn-statusbar__progress', hidden: !loading }, h('span', { class: 'rn-progress' }, h('span', { class: 'rn-progress__fill gx-p80' }))),
     h('div', { class: 'rn-statusbar__pane' }, h('button', { class: 'rn-statusbar__zoom', type: 'button', 'aria-label': 'Zoom 110%, reset to 100%', text: '110%' })),
     root.dataset.skin === 'y2001' && h('div', { class: 'rn-statusbar__pane rn-statusbar__profile', 'data-color': 'purple', text: 'Work' }))
 }
@@ -243,6 +254,11 @@ function shell() {
           statusbar(false)))),
     h('div', { class: 'gx-section' }, h('p', { class: 'gx-h', text: 'Find bar (no match), status bar (error)' }),
       h('div', { class: 'gx-frame gx-short' }, findbar(true), statusbar(true))),
+    h('div', { class: 'gx-section' }, h('p', { class: 'gx-h', text: 'Button states: rest, pressed, disabled, primary, primary disabled, danger, icon, icon disabled' }),
+      h('div', { class: 'gx-frame gx-short' }, h('div', { class: 'rn-findbar gx-states', id: 'gx-states' },
+        btn('', 'Rest'), btn('', 'Pressed', null, { 'aria-pressed': 'true' }), btn('', 'Disabled', null, { disabled: true }),
+        btn('rn-btn--primary', 'Primary'), btn('rn-btn--primary', 'Primary off', null, { disabled: true }), btn('rn-btn--danger', 'Delete', 'trash'),
+        iconBtn('reload', 'Reload', { id: 'gx-state-icon' }), iconBtn('stop', 'Stop', { disabled: true })))),
     overlays())
 }
 
@@ -285,7 +301,7 @@ const pages = {
         h('nav', { class: 'rn-settings__nav', 'aria-label': 'Settings sections' }, h('a', { href: '#', 'aria-current': 'true', text: 'Appearance' }), h('a', { href: '#', text: 'Search' }), h('a', { href: '#', text: 'Privacy' }), h('a', { href: '#', text: 'Profiles' })),
         h('div', {},
           h('section', { class: 'rn-panel' }, h('h2', { text: 'Appearance' }),
-            h('div', { class: 'rn-radio-cards' }, card('y1994', '1994 Pioneer', 'Flat cool gray and serif labels.'), card('y1997', '1997 Comet', 'Silver-gray faces and a starry throbber.', true), card('y2001', '2001 Horizon', 'Glossy blue strip and round buttons.')),
+            h('div', { class: 'rn-radio-cards' }, card('y1994', '1994 Pioneer', 'Flat cool gray and serif labels.'), card('y1997', '1997 Comet', 'Silver-gray faces and a starry throbber.', true), card('y1999', '1999 Gumdrop', 'Translucent candy-plastic tabs, glossy gel buttons, a brushed-metal toolbar and soft pinstripes.'), card('y2001', '2001 Horizon', 'Glossy blue strip and round buttons.')),
             h('label', { class: 'rn-check' }, h('input', { type: 'checkbox', checked: true }), h('span', {}, 'Reduce motion (stop the throbber and marquees)', h('br'), h('span', { class: 'rn-help', text: 'Also follows your system setting.' })))),
           h('section', { class: 'rn-panel' }, h('h2', { text: 'Search' }), h('div', { class: 'rn-field' }, h('label', { for: 'gx-eng', text: 'Search engine' }), h('select', { class: 'rn-input', id: 'gx-eng' }, h('option', { text: 'DuckDuckGo' }))),
             h('span', { class: 'rn-note rn-note--saved', text: 'Saved' })),
@@ -335,7 +351,7 @@ function render() {
 
 // harness-only dynamic styles via CSSOM (keeps the markup free of style attributes)
 const gx = document.createElement('style')
-gx.textContent = `.gx-p60{width:60%} .gx-w320{width:320px} .gx-short{height:auto} .gx-center{display:flex;align-items:center;justify-content:center;gap:12px}
+gx.textContent = `.gx-p60{width:60%} .gx-p80{width:80%} .gx-states{justify-content:flex-start;height:44px} .gx-w320{width:320px} .gx-short{height:auto} .gx-center{display:flex;align-items:center;justify-content:center;gap:12px}
  .gx-mark{image-rendering:auto} .gx-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:24px;flex-wrap:wrap}`
 document.head.append(gx)
 

@@ -1,4 +1,5 @@
 // Address-bar input classification (AC3, AC37). Pure, no Electron or Node imports.
+import { displayUrl } from './url-safety'
 
 /**
  * Local copy of the search-engine shape; T2's search-engines.ts may re-export or supersede it.
@@ -25,7 +26,7 @@ export type OmniboxResult =
   | { kind: 'search'; url: string }
   | { kind: 'blocked'; url: ''; reason: 'empty' | 'dangerous-scheme' | 'unsupported-scheme' | 'invalid' }
 
-/** Never navigated from the omnibox, with or without spaces. */
+/** Never navigated from the omnibox, with or without spaces (view-source: has one exception, see classifyInput). */
 const DANGEROUS = new Set([
   'javascript', 'data', 'vbscript', 'blob', 'filesystem', 'view-source', 'chrome', 'chrome-extension',
   'chrome-untrusted', 'devtools', 'about', 'ftp', 'mailto', 'tel', 'sms', 'ws', 'wss'
@@ -105,6 +106,7 @@ export function classifyInput(text: string, engine: SearchEngine = DEFAULT_SEARC
 
   if (scheme && !looksHostPort) {
     if (input.toLowerCase() === 'about:blank') return { kind: 'url', url: 'about:blank' }
+    if (scheme === 'view-source') return viewSourceInput(input.slice(scheme.length + 1))
     if (DANGEROUS.has(scheme)) return { kind: 'blocked', url: '', reason: 'dangerous-scheme' }
     const hasSlashes = input.slice(scheme.length + 1).startsWith('//')
     if (scheme === 'http' || scheme === 'https' || scheme === 'retronet' || scheme === 'file') {
@@ -124,6 +126,20 @@ export function classifyInput(text: string, engine: SearchEngine = DEFAULT_SEARC
   const url = bareHostToUrl(input)
   if (url) return { kind: 'url', url }
   return { kind: 'search', url: buildSearchUrl(input, engine) }
+}
+
+/**
+ * Typed `view-source:<http(s) URL>` (AC54, as other browsers allow). The inner text must itself be an explicit
+ * http(s) URL; every other inner form (file:, retronet:, view-source:, javascript:, a bare host, a search) is
+ * a dangerous scheme. main re-checks the result with decideBrowserNavigation.
+ */
+function viewSourceInput(inner: string): OmniboxResult {
+  const blocked: OmniboxResult = { kind: 'blocked', url: '', reason: 'dangerous-scheme' }
+  const m = /^(https?):\/\//i.exec(inner)
+  if (!m || /\s/.test(inner)) return blocked
+  const u = tryUrl(inner)
+  if (!u || u.hostname === '' || (u.protocol !== 'http:' && u.protocol !== 'https:')) return blocked
+  return { kind: 'url', url: `view-source:${displayUrl(u.href)}` }
 }
 
 export type DropPayload = { kind: 'url'; url: string } | { kind: 'search'; text: string }

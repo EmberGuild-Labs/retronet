@@ -1,0 +1,96 @@
+/* Hidden era page "cascade" (B3): always the y1997 Comet look (DESIGN-EGGS §2 shared rules + §3.2).
+   Unlayered, so it wins over the skin's @layer rules. Colours and bevels come from skins/y1997 tokens.
+   No motion of any kind on egg pages (DESIGN-EGGS E-2). */
+
+/* ---------- shared egg rules (DESIGN-EGGS §2) ---------- */
+.rn-egg { max-width: 760px; }
+.rn-egg p, .rn-egg li { max-width: 68ch; }
+.rn-egg__kicker { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rn-fg-muted); }
+.rn-egg__dek { color: var(--rn-fg-muted); text-wrap: pretty; }
+.rn-egg__toc ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.rn-egg__fig { margin: 0 0 16px; }
+.rn-egg__fig img { display: block; max-width: 100%; height: auto; }
+.rn-egg__fig figcaption { margin-top: 6px; font-size: 14px; line-height: 1.4; text-wrap: pretty; }
+.rn-egg__caption { display: block; }
+.rn-egg__photo-credit { display: block; font-size: 13px; color: var(--rn-fg-muted); }
+.rn-egg__sources ol, .rn-egg__credits ol { margin: 0 0 12px; padding-inline-start: 2.25em; }
+.rn-egg__sources li, .rn-egg__credits li { margin-bottom: 8px; line-height: 1.45; }
+.rn-egg__host { color: var(--rn-fg-muted); font-size: 13px; overflow-wrap: anywhere; }
+.rn-egg__host::before { content: "("; }
+.rn-egg__host::after { content: ")"; }
+.rn-egg__disclaimer { font-size: 14px; color: var(--rn-fg-muted); }
+.rn-egg__foot { margin-top: 24px; font-size: 14px; text-align: center; }
+.rn-egg :target { scroll-margin-top: 24px; }
+.rn-egg__pair { display: grid; grid-template-columns: var(--egg-photo-w) minmax(0, 1fr); gap: 20px; align-items: start; }
+.rn-egg__pair--end { grid-template-columns: minmax(0, 1fr) var(--egg-photo-w); }
+.rn-egg__pair--end > .rn-egg__fig { order: 2; }
+@media (max-width: 700px) {
+  .rn-egg__pair, .rn-egg__pair--end { display: block; }
+}
+@media (forced-colors: active) { .rn-egg__fig img { outline: 1px solid CanvasText; } }
+
+/* ---------- 1997 Comet: tiled-background homepage (DESIGN-EGGS §3.2) ---------- */
+.rn-egg--y1997 .rn-egg__head { text-align: center; }
+.rn-egg--y1997 .rn-egg__head h1 { margin-bottom: 8px; }
+.rn-egg--y1997 .rn-egg__dek { margin: 0 auto; font: 400 14px/1.45 var(--rn-stack-sans97); color: var(--rn-fg-muted); }
+
+/* our own static construction strip: real text, decorative barrier band */
+.rn-egg-construction {
+  display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%;
+  margin: 12px auto 16px; padding: 4px 10px 4px 4px;
+  background: #000080; box-shadow: var(--rn-bevel-field);
+  font: 400 20px/1.1 var(--rn-stack-pixel); color: #FFFF66; text-align: start;
+  -webkit-font-smoothing: none;
+}
+.rn-egg-construction__band {
+  flex: none; width: 48px; height: 16px;
+  background: repeating-linear-gradient(135deg, #FFFF66 0 6px, #000000 6px 12px);
+  box-shadow: 0 0 0 1px #000000;
+}
+
+/* centred bracket nav bar: [ The computer | The person | Sources | Photo credits ] */
+.rn-egg--y1997 .rn-egg__toc { margin: 0 0 16px; font: 400 13px/1.4 var(--rn-stack-sans97); }
+.rn-egg--y1997 .rn-egg__toc ul { justify-content: center; align-items: center; gap: 0; }
+.rn-egg--y1997 .rn-egg__toc ul::before { content: "[" / ""; margin-inline-end: 6px; }
+.rn-egg--y1997 .rn-egg__toc ul::after { content: "]" / ""; margin-inline-start: 6px; }
+.rn-egg--y1997 .rn-egg__toc li + li::before { content: "|" / ""; margin-inline: 8px; }
+.rn-egg--y1997 .rn-egg__toc a { display: inline-block; min-height: 24px; line-height: 24px; }
+
+/* subject and list panels: the skin's white sunken .rn-panel */
+.rn-egg--y1997 .rn-panel { margin-bottom: 16px; }
+.rn-egg--y1997 .rn-egg__kicker { margin-bottom: 4px; font: 700 12px/1.2 var(--rn-stack-sans97); letter-spacing: 0.04em; color: #000080; }
+.rn-egg--y1997 .rn-egg__subject h2, .rn-egg--y1997 .rn-egg__sources h2, .rn-egg--y1997 .rn-egg__credits h2 { margin-bottom: 12px; }
+
+/* "border=2" picture frames */
+.rn-egg--y1997 .rn-egg__fig img { padding: 2px; background: #C0C0C0; box-shadow: var(--rn-bevel-raised); outline: 0; }
+.rn-egg--y1997 .rn-egg__fig--wide { width: min(100%, 560px); margin-inline: auto; text-align: center; }
+.rn-egg--y1997 .rn-egg__fig--wide img { width: 100%; box-sizing: border-box; }
+.rn-egg--y1997 .rn-egg__fig figcaption { font-family: var(--rn-stack-sans97); }
+.rn-egg--y1997 .rn-egg__photo-credit { margin-top: 2px; }
+.rn-egg--y1997 .rn-egg__pair { --egg-photo-w: 280px; }
+.rn-egg--y1997 .rn-egg__pair .rn-egg__fig { margin-bottom: 0; }
+.rn-egg--y1997 .rn-egg__pair .rn-egg__fig img { width: 100%; box-sizing: border-box; }
+.rn-egg--y1997 .rn-egg__text > :last-child { margin-bottom: 0; }
+
+.rn-egg--y1997 .rn-egg__host { font-family: var(--rn-stack-sans97); }
+.rn-egg--y1997 .rn-egg__credit-label { font-weight: 700; }
+.rn-egg--y1997 .rn-egg__license-note { margin: 0; font-size: 14px; color: var(--rn-fg-muted); }
+
+.rn-egg--y1997 .rn-egg__disclaimer { margin: 20px auto 0; text-align: center; font-family: var(--rn-stack-sans97); }
+.rn-egg--y1997 .rn-egg__foot { font-family: var(--rn-stack-sans97); }
+.rn-egg--y1997 .rn-egg__foot p { margin: 0 auto 8px; }
+.rn-egg__badge img { display: block; margin-inline: auto; image-rendering: pixelated; }
+
+@media (max-width: 700px) {
+  .rn-egg--y1997 .rn-egg__pair .rn-egg__fig { margin-bottom: 16px; }
+}
+@media (forced-colors: active) {
+  .rn-egg-construction { border: 1px solid CanvasText; }
+  .rn-egg-construction__band { forced-color-adjust: none; }
+}
+
+/* narrow: the " | " separators and brackets would orphan on a wrapped line, so drop them and space the links */
+@media (max-width: 480px) {
+  .rn-egg--y1997 .rn-egg__toc ul { gap: 0 14px; }
+  .rn-egg--y1997 .rn-egg__toc li + li::before, .rn-egg--y1997 .rn-egg__toc ul::before, .rn-egg--y1997 .rn-egg__toc ul::after { content: none; }
+}

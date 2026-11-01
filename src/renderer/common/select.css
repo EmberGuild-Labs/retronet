@@ -1,0 +1,66 @@
+/* Structure for the themed select (DESIGN-MENUS 8). Colours, bevels, chevrons and check glyphs come from
+   skins/<id>/pages.css; only layout lives here. Instant open/close, no motion. */
+.rn-select {
+  position: relative;
+  display: inline-block;
+  min-width: 200px;
+}
+
+.rn-select__button {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding-inline-start: 8px;
+  cursor: default;
+  user-select: none;
+}
+
+.rn-select__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rn-select__chevron {
+  flex: none;
+  width: 30px;
+  align-self: stretch;
+}
+
+.rn-select__listbox {
+  position: absolute;
+  inset-inline-start: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  min-width: 100%;
+  max-width: 480px;
+  max-height: calc(24px * 10 + 2 * var(--rn-sel-pad, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+}
+.rn-select__listbox[hidden] { display: none; }
+.rn-select__listbox[data-placement='below'], .rn-select__listbox:not([data-placement]) {
+  top: 100%;
+  margin-top: var(--rn-sel-gap, 0px);
+}
+.rn-select__listbox[data-placement='above'] {
+  bottom: 100%;
+  margin-bottom: var(--rn-sel-gap, 0px);
+}
+
+.rn-select__option {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-inline: 0 8px;
+  white-space: nowrap;
+  cursor: default;
+}
+.rn-select__check { flex: none; width: 22px; align-self: stretch; }
+.rn-select__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.rn-select__button[aria-disabled='true'] { pointer-events: none; }

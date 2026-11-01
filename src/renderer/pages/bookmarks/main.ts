@@ -4,8 +4,11 @@
 // textContent / attributes only.
 import { pageApi } from '../../common/api'
 import { h, icon } from '../../common/dom'
+import { createSelect, type SelectElement } from '../../common/select'
 import { initSkin } from '../../common/skin-loader'
+import { BOOKMARK_IMPORT_MAX, IMPORT_ERRORS } from '@shared/bookmarks-import'
 import type { BookmarkNode, BookmarkTree } from '@shared/types'
+import '../../common/select.css'
 import './bookmarks.css'
 
 initSkin('page')
@@ -76,6 +79,10 @@ function allFolders(skip?: string): Array<{ folder: Folder; depth: number }> {
   for (const r of roots()) walk(r, 0)
   return out
 }
+/** Select options for every folder; depth is shown with non-breaking spaces (plain spaces collapse). */
+function folderOptions(skip?: string): Array<{ value: string; label: string }> {
+  return allFolders(skip).map(({ folder, depth }) => ({ value: folder.id, label: `${'\u00a0\u00a0'.repeat(depth)}${folderName(folder)}` }))
+}
 function pathTo(id: string): Folder[] {
   const out: Folder[] = []
   const walk = (f: Folder): boolean => {
@@ -93,26 +100,31 @@ function pathTo(id: string): Folder[] {
 const status = h('p', { class: 'rn-note rn-bm__status', attrs: { role: 'status' } })
 const addBtn = h('button', { class: 'rn-btn', attrs: { type: 'button' } }, icon('bookmark'), h('span', { class: 'rn-btn__label', text: 'Add bookmark' }))
 const folderBtn = h('button', { class: 'rn-btn', attrs: { type: 'button' } }, icon('folder'), h('span', { class: 'rn-btn__label', text: 'New folder' }))
+const importBtn = h('button', { class: 'rn-btn', attrs: { type: 'button' } }, icon('folder'), h('span', { class: 'rn-btn__label', text: 'Import…' }))
+const exportBtn = h('button', { class: 'rn-btn', attrs: { type: 'button' } }, icon('download'), h('span', { class: 'rn-btn__label', text: 'Export…' }))
+const bannerRegion = h('div', { class: 'rn-bm__banner', attrs: { role: 'status', id: 'rn-bm-banner' } })
 const treeEl = h('ul', { class: 'rn-tree', attrs: { role: 'tree', 'aria-label': 'Bookmark folders' } })
-const folderPicker = h('select', { class: 'rn-input rn-bm__picker', attrs: { 'aria-label': 'Folder' } })
+const pickerLabel = h('span', { class: 'rn-bm__picker-label', attrs: { id: 'rn-bm-picker-label' }, text: 'Folder' })
+const folderPicker: SelectElement = createSelect({ id: 'rn-bm-picker', labelledBy: 'rn-bm-picker-label', options: [], onChange: (v) => select(v, false) })
+folderPicker.classList.add('rn-bm__picker')
 const heading = h('h2', { class: 'rn-bm__heading', attrs: { id: 'rn-bm-folder' } })
 const tableWrap = h('div', { class: 'rn-bm__content' })
 const loading = h('p', { class: 'rn-loading', text: 'Opening bookmarks...' })
 
 addBtn.addEventListener('click', () => startEdit('new-bookmark'))
 folderBtn.addEventListener('click', () => startEdit('new-folder'))
-folderPicker.addEventListener('change', () => select(folderPicker.value, false))
 
 const main = h(
   'main',
   { class: 'rn-page rn-page--wide' },
-  h('div', { class: 'rn-page__header' }, h('h1', { text: 'Bookmarks' }), h('div', { class: 'rn-page__actions' }, addBtn, folderBtn)),
+  h('div', { class: 'rn-page__header' }, h('h1', { text: 'Bookmarks' }), h('div', { class: 'rn-page__actions' }, addBtn, folderBtn, h('div', { class: 'rn-bm__io' }, importBtn, exportBtn))),
+  bannerRegion,
   status,
   loading,
   h(
     'div',
     { class: 'rn-bookmarks' },
-    h('nav', { class: 'rn-bm__nav', attrs: { 'aria-label': 'Folders' } }, treeEl, folderPicker),
+    h('nav', { class: 'rn-bm__nav', attrs: { 'aria-label': 'Folders' } }, treeEl, pickerLabel, folderPicker),
     h('section', { class: 'rn-bm__main', attrs: { 'aria-labelledby': 'rn-bm-folder' } }, heading, tableWrap)
   )
 )
@@ -169,9 +181,8 @@ function renderTree(): void {
   treeEl.replaceChildren(...roots().map((r) => build(r, 1)))
   if (hadFocus) treeEl.querySelector<HTMLElement>('[tabindex="0"]')?.focus()
 
-  folderPicker.replaceChildren(
-    ...allFolders().map(({ folder, depth }) => h('option', { attrs: { value: folder.id, selected: folder.id === selectedId }, text: `${' '.repeat(depth)}${folderName(folder)}` }))
-  )
+  folderPicker.options = folderOptions()
+  folderPicker.value = selectedId
 }
 
 function toggle(id: string, open?: boolean): void {
@@ -340,11 +351,8 @@ function formRow(n: BookmarkNode | null): HTMLTableRowElement {
     fields.push(h('div', { class: 'rn-field' }, h('label', { attrs: { for: urlInput.id }, text: 'Address' }), urlInput, urlErr))
   }
   const currentParent = n ? (findNode(n.id)?.parent?.id ?? selectedId) : selectedId
-  const parentSelect = h('select', { class: 'rn-input', attrs: { id: `rn-f-parent-${uid}` } })
-  for (const { folder, depth } of allFolders(n?.kind === 'folder' ? n.id : undefined)) {
-    parentSelect.append(h('option', { attrs: { value: folder.id, selected: folder.id === currentParent }, text: `${' '.repeat(depth)}${folderName(folder)}` }))
-  }
-  fields.push(h('div', { class: 'rn-field' }, h('label', { attrs: { for: parentSelect.id }, text: 'Folder' }), parentSelect))
+  const parentSelect = createSelect({ id: `rn-f-parent-${uid}`, labelledBy: `rn-f-parent-label-${uid}`, options: folderOptions(n?.kind === 'folder' ? n.id : undefined), value: currentParent })
+  fields.push(h('div', { class: 'rn-field' }, h('span', { class: 'rn-label', attrs: { id: `rn-f-parent-label-${uid}` }, text: 'Folder' }), parentSelect))
 
   const save = h('button', { class: 'rn-btn rn-btn--primary', attrs: { type: 'submit' }, text: isNew ? (isFolder ? 'Create folder' : 'Add bookmark') : 'Save' })
   const cancel = h('button', { class: 'rn-btn', attrs: { type: 'button' }, text: 'Cancel' })
@@ -528,3 +536,97 @@ document.addEventListener('visibilitychange', () => {
 })
 
 void refresh()
+
+// ---------- Import / Export (AC49, AC50) ----------
+type BannerKind = 'info' | 'ok' | 'warn' | 'error'
+let originBtn: HTMLButtonElement = importBtn
+const num = (n: number): string => n.toLocaleString('en-US')
+const plural = (n: number, one: string, many: string): string => `${num(n)} ${n === 1 ? one : many}`
+function clearBanner(): void {
+  bannerRegion.replaceChildren()
+}
+function showBanner(kind: BannerKind, lines: string[], extra?: HTMLElement): void {
+  const close = h('button', { class: 'rn-btn rn-banner__close', attrs: { type: 'button', 'aria-label': 'Dismiss' } }, icon('close'))
+  close.addEventListener('click', () => {
+    clearBanner()
+    originBtn.focus()
+  })
+  const ic = icon(kind === 'warn' || kind === 'error' ? 'warning' : 'info')
+  ic.classList.add('rn-banner__icon')
+  const body = h('div', { class: 'rn-banner__body' }, ...lines.map((t) => h('p', { text: t })), extra)
+  bannerRegion.replaceChildren(h('div', { class: ['rn-banner', kind !== 'info' && `rn-banner--${kind}`] }, ic, body, close))
+}
+function setBusy(busy: boolean, which?: 'import' | 'export'): void {
+  importBtn.disabled = busy
+  exportBtn.disabled = busy
+  tableWrap.setAttribute('aria-busy', String(busy))
+  const lbl = importBtn.querySelector('.rn-btn__label')
+  const ic = importBtn.querySelector<HTMLElement>('.rn-icon')
+  const on = busy && which === 'import'
+  if (lbl) lbl.textContent = on ? 'Importing…' : 'Import…'
+  if (ic) ic.dataset.icon = on ? 'loading' : 'folder'
+}
+importBtn.addEventListener('click', async () => {
+  originBtn = importBtn
+  clearBanner()
+  setBusy(true, 'import')
+  const r = await api.bookmarks.import()
+  setBusy(false)
+  if (!r.ok) {
+    // Main throws the exact IMPORT_ERRORS constants (R26); compare, never pattern-match.
+    const msg =
+      r.code === 'E_UNAVAILABLE'
+        ? 'Error: another file dialog is already open in this window.'
+        : r.code === 'E_INVALID' && r.message === IMPORT_ERRORS.tooLarge
+          ? 'Error: that file is larger than 10 MB.'
+          : r.code === 'E_INVALID' && (r.message === IMPORT_ERRORS.notBookmarks || r.message === IMPORT_ERRORS.notAFile)
+            ? "Error: that file doesn't contain any bookmarks. Choose a bookmark file (HTML) exported from a browser."
+            : "Error: couldn't import that file."
+    showBanner('error', [msg])
+    importBtn.focus()
+    return
+  }
+  if (r.data.status === 'cancelled') {
+    importBtn.focus()
+    return
+  }
+  const d = r.data
+  await refresh()
+  const skipped: string[] = []
+  if (d.duplicates) skipped.push(`${num(d.duplicates)} already bookmarked`)
+  if (d.unsupported) skipped.push(`${num(d.unsupported)} that RetroNet can't open (like javascript: or file: links)`)
+  const lines: string[] = []
+  if (d.added === 0) {
+    lines.push(
+      d.duplicates && !d.unsupported
+        ? `Nothing new to import. All ${num(d.duplicates)} bookmarks were already here.`
+        : d.duplicates
+          ? `Nothing new to import. Skipped ${skipped.join(' and ')}.`
+          : 'Nothing new to import. None of the links could be opened.'
+    )
+  } else {
+    lines.push(`Imported ${plural(d.added, 'bookmark', 'bookmarks')} into “${d.folderTitle}”.`)
+    if (skipped.length) lines.push(`Skipped ${skipped.join(' and ')}.`)
+  }
+  if (d.truncated) lines.push(`The file had more bookmarks than RetroNet can import at once, so only the first ${num(BOOKMARK_IMPORT_MAX)} were added.`)
+  let show: HTMLButtonElement | undefined
+  if (d.added > 0) {
+    // added === 0: main's folderId ('other') is a sentinel, so there is no folder to show or select.
+    show = h('button', { class: 'rn-btn', attrs: { type: 'button' }, text: 'Show folder' })
+    show.addEventListener('click', () => select(d.folderId, true))
+  }
+  showBanner(d.added === 0 || d.truncated ? 'warn' : 'ok', lines, show)
+  ;(show ?? importBtn).focus()
+})
+exportBtn.addEventListener('click', async () => {
+  originBtn = exportBtn
+  clearBanner()
+  setBusy(true, 'export')
+  showBanner('info', ['Exporting…'])
+  const r = await api.bookmarks.export()
+  setBusy(false)
+  clearBanner()
+  if (!r.ok) showBanner('error', ["Error: couldn't save the file."])
+  else if (r.data.status === 'exported') showBanner('ok', [`Exported ${plural(r.data.count, 'bookmark', 'bookmarks')}.`])
+  exportBtn.focus()
+})

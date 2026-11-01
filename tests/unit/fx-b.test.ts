@@ -125,7 +125,7 @@ describe('R3/N2 context menu "Search for" is always a search', () => {
     const items = buildPageMenu(w, fakeTab('https://a.test/'), params({ selectionText: 'file:///etc/passwd' }))
     const search = items.find((i: any) => i.id === 'ctx.search') as any
     expect(search.label).toBe('Search Google for "file:///etc/passwd"')
-    search.click()
+    search.run()
     expect(navigated).toEqual([])
     expect(created).toHaveLength(1)
     expect(created[0]!.url).toBe('https://www.google.com/search?q=file%3A%2F%2F%2Fetc%2Fpasswd')

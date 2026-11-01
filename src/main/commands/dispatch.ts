@@ -21,14 +21,15 @@ import { logger } from '../logger'
 import { profileManager } from '../profiles/profile-manager'
 import { UI_ONLY_HOSTS } from '../protocol/retronet-protocol'
 import { stripUrlCredentials } from '../storage/url-credentials'
+import { showMenu, type ShowMenuOptions } from '../menus/menu-host'
 import { createGroupFromTab } from '../tabs/groups'
 import type { Tab } from '../tabs/tab'
-import { browserTabs } from '../tabs/tab-manager'
+import { browserTabs, onTabStructureChanged } from '../tabs/tab-manager'
 import type { ProfileContext, WindowContext } from '../types'
 import { windowManager } from '../windows/window-manager'
-import { attachContextMenu, buildProfilesMenu, normalWindowFor, openInTab, popupMenu } from './context-menu'
+import { attachContextMenu, buildProfilesMenu, normalWindowFor, openInTab } from './context-menu'
 import * as find from './find'
-import { buildMenuTemplate } from './menu'
+import { buildMenuTemplate, viewSourceUrlFor } from './menu'
 import { attachShortcuts } from './shortcuts'
 import { attachWheelZoom, zoomActive } from './zoom'
 
@@ -356,6 +357,11 @@ export function runCommand(w: WindowContext | null, id: CommandId, arg?: string)
     case 'devtools.toggle':
       toggleDevTools(w)
       return
+    case 'page.viewSource': {
+      const target = active ? viewSourceUrlFor(active.url()) : null
+      if (target) tabs.create({ url: target, openerId: active!.id })
+      return
+    }
     case 'palette.open':
       openPalette(w)
       return
@@ -424,12 +430,59 @@ function windowForMenu(bw: BrowserWindow | undefined): WindowContext | null {
 
 let menuTimer: NodeJS.Immediate | null = null
 
+/**
+ * What the app menu shows that depends on tabs (R22/E4): the focused window, its active tab and whether
+ * "View Page Source" is enabled for that tab's URL.
+ */
+export interface AppMenuBasis {
+  windowId: number | null
+  tabId: number | null
+  viewSource: boolean
+}
+
+/** The basis the menu was last built with (null = never built), and how many builds ran (AC74 test counter). */
+let builtBasis: AppMenuBasis | null = null
+let appMenuBuilds = 0
+
+export function appMenuBuildCount(): number {
+  return appMenuBuilds
+}
+
+function basisFor(w: WindowContext | null): AppMenuBasis {
+  const tab = w && !w.win.isDestroyed() ? browserTabs(w).active() : null
+  return { windowId: w?.id ?? null, tabId: tab?.id ?? null, viewSource: tab ? viewSourceUrlFor(tab.url()) !== null : false }
+}
+
+/** Pure: does the menu built with `built` need a rebuild to show `now`? */
+export function appMenuStale(built: AppMenuBasis | null, now: AppMenuBasis): boolean {
+  return !built || built.windowId !== now.windowId || built.tabId !== now.tabId || built.viewSource !== now.viewSource
+}
+
+/** Rebuild only when the focused window's active tab or its View Source state changed since the last build. */
+function refreshAppMenuIfStale(): void {
+  if (appMenuStale(builtBasis, basisFor(windowManager.focused()))) scheduleMenuRebuild()
+}
+
+/**
+ * R22/E4: a tab webContents navigated or took focus. Only the active tab of the focused window matters; any other
+ * tab (background tabs, other windows) causes no rebuild.
+ */
+function onTabMenuEvent(wc: WebContents): void {
+  const hit = resolveWc(wc)
+  if (!hit || hit.role !== 'tab' || !hit.tab) return
+  const w = windowManager.focused()
+  if (hit.w !== w || browserTabs(w).active() !== hit.tab) return
+  refreshAppMenuIfStale()
+}
+
 function buildAppMenu(): void {
   if (PLATFORM !== 'mac') {
     Menu.setApplicationMenu(null)
     return
   }
+  appMenuBuilds++
   const w = windowManager.focused()
+  builtBasis = basisFor(w)
   let profiles: Array<{ id: string; name: string }> = []
   try {
     profiles = profileManager().list()
@@ -445,7 +498,8 @@ function buildAppMenu(): void {
       profiles,
       currentProfileId: w && !w.incognito ? w.profile.id : null,
       bookmarkBar: settings?.bookmarkBar ?? true,
-      devUi: !app.isPackaged
+      devUi: !app.isPackaged,
+      ...(w ? { activeUrl: browserTabs(w).active()?.url() ?? '' } : {})
     },
     {
       run: (id, arg) => {
@@ -484,6 +538,15 @@ export function scheduleMenuRebuild(): void {
 // ---- webContents wiring ----
 
 function attachAll(wc: WebContents): void {
+  // "View Page Source" is enabled by the active tab's URL: refresh the menu when a tab navigates or takes focus.
+  // (Registered for every webContents: a tab is only known to the router after creation.)
+  // R22/E4: only the focused window's active tab, and only when View Source enablement flips (onTabMenuEvent).
+  if (PLATFORM === 'mac') {
+    const refresh = (): void => onTabMenuEvent(wc)
+    wc.on('did-navigate', refresh)
+    wc.on('did-navigate-in-page', refresh)
+    wc.on('focus', refresh)
+  }
   attachShortcuts(wc, PLATFORM, {
     accepts: (x) => router.senderInfo(x) !== undefined,
     run: (x, id) => {
@@ -505,6 +568,17 @@ function attachAll(wc: WebContents): void {
 }
 
 // ---- IPC ----
+
+/** A shell menu trigger: below the button's rect when given, else at the point (both window-content coordinates). */
+export function triggerPlacement(req: {
+  x: number
+  y: number
+  anchor?: { x: number; y: number; width: number; height: number }
+}): Pick<ShowMenuOptions, 'anchor' | 'placement'> {
+  return req.anchor
+    ? { anchor: { ...req.anchor }, placement: 'below' }
+    : { anchor: { x: req.x, y: req.y, width: 0, height: 0 }, placement: 'point' }
+}
 
 function registerHandlers(): void {
   router.handle('commands.run', (req, ctx) => {
@@ -531,9 +605,17 @@ function registerHandlers(): void {
     return null
   })
 
-  router.handle('profiles.menu', (req, ctx) => {
+  // Resolves when the menu closes, so the shell can reset aria-expanded and return focus (A7).
+  router.handle('profiles.menu', async (req, ctx) => {
     const w = windowOfCtx(ctx)
-    popupMenu(w, buildProfilesMenu(w, (id, arg) => runSafely(w, id, arg)), req.x, req.y)
+    await showMenu(w, {
+      kind: 'profiles',
+      label: 'Profiles',
+      entries: buildProfilesMenu(w, (id, arg) => runSafely(w, id, arg)),
+      ...triggerPlacement(req),
+      keyboard: req.keyboard === true,
+      target: w.shell
+    })
     return null
   })
 
@@ -552,6 +634,12 @@ export function registerCommands(): void {
   windowManager.onWindowFocused(() => scheduleMenuRebuild())
   windowManager.onWindowCreated(() => scheduleMenuRebuild())
   windowManager.onWindowClosed(() => scheduleMenuRebuild())
+  // Tab switches (and closes, new active tabs) in the focused window; background-window changes are ignored.
+  if (PLATFORM === 'mac') {
+    onTabStructureChanged((w) => {
+      if (w === windowManager.focused()) refreshAppMenuIfStale()
+    })
+  }
   try {
     profileManager().onChange(() => scheduleMenuRebuild())
   } catch {

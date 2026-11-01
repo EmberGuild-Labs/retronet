@@ -1,6 +1,6 @@
 // Overlay renderer (retronet://overlay/, T20). One transparent WebContentsView on top of the window that shows one
 // thing at a time, as main tells it with `overlay` events: the command palette, a permission prompt, the tab group
-// editor, a dialog, the HTTP sign-in dialog, the omnibox suggestion list or the fullscreen notice. `hide` (or the
+// editor, a dialog, the HTTP sign-in dialog, the omnibox suggestion list, the fullscreen notice or a themed menu. `hide` (or the
 // next event) tears the current component down. The view usually covers the whole window, so a click on the transparent area around a
 // component is "outside" (close/cancel); for suggestions main shrinks the view to just the list.
 import type { OverlayEvent, WindowSnapshot } from '@shared/types'
@@ -10,11 +10,13 @@ import { mountDialog } from './dialogs'
 import { mountFullscreenNotice } from './fullscreen-notice'
 import { mountGroupEditor } from './group-editor'
 import { mountHttpAuth } from './http-auth'
+import { mountMenu } from './menu'
 import { mountPalette } from './palette'
 import { mountPermissionPrompt, type PromptHandle } from './permission-prompt'
 import { mountSuggest, type SuggestHandle } from './suggest'
 import type { Mounted, OverlayEnv } from './ui'
 import './overlay.css'
+import './menu.css'
 
 initSkin('overlay')
 
@@ -83,6 +85,13 @@ function show(ev: OverlayEvent): void {
     case 'fullscreen-notice': {
       const mounted = mountFullscreenNotice(ev, env, () => current?.mounted === mounted)
       mount('fullscreen-notice', mounted)
+      return
+    }
+    case 'menu': {
+      // A new menu always replaces the old one (main keeps one menu per window). Place it once it is in the document.
+      const mounted = mountMenu(ev, env)
+      mount('menu', mounted)
+      mounted.place()
       return
     }
   }

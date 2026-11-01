@@ -1,5 +1,6 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'electron-vite'
+import { EGG_HOSTS } from './src/shared/eggs'
 
 const r = (p: string): string => resolve(__dirname, p)
 
@@ -12,7 +13,9 @@ const PAGES = [
   'shortcuts',
   'about',
   'certerror',
-  'neterror'
+  'neterror',
+  // Hidden era pages (PLAN-FINAL 1.3): same layout as the other pages, no bridge.
+  ...EGG_HOSTS
 ] as const
 
 const alias = { '@shared': r('src/shared') }

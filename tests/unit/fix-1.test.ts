@@ -126,3 +126,13 @@ describe('session back/forward history (FIX-1 item 4)', () => {
     expect(store.load()).toEqual([rec])
   })
 })
+
+import { stripTitleCredentials } from '../../src/main/storage/url-credentials'
+describe('titles never keep userinfo (F-E2E2 finding)', () => {
+  it('removes user:pass@ that a URL-as-title carries', () => {
+    expect(stripTitleCredentials('u:p@127.0.0.1:8000/x', 'http://u:p@127.0.0.1:8000/x')).toBe('127.0.0.1:8000/x')
+    expect(stripTitleCredentials('http://alice@host/', 'http://alice@host/')).toBe('http://host/')
+    expect(stripTitleCredentials('Real title', 'http://u:p@h/')).toBe('Real title')
+    expect(stripTitleCredentials('mail me@x.com', 'http://h/')).toBe('mail me@x.com')
+  })
+})

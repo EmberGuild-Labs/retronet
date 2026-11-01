@@ -1,0 +1,76 @@
+/* Hidden era page 4 of 4, "2001 Horizon" glossy portal (B5, DESIGN-EGGS §2 shared rules + §3.4).
+   Unlayered, so it wins over the skin's @layer rn-skin without !important. No motion at all (E-2). */
+
+/* ---------- shared egg rules (§2) ---------- */
+.rn-egg p, .rn-egg li { max-width: 68ch; }
+.rn-egg__kicker { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rn-fg-muted); }
+.rn-egg__dek { color: var(--rn-fg-muted); text-wrap: pretty; }
+.rn-egg__fig { margin: 0 0 16px; }
+.rn-egg__fig img { display: block; max-width: 100%; height: auto; outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }
+.rn-egg__fig figcaption { margin-top: 6px; font-size: 14px; line-height: 1.4; text-wrap: pretty; }
+.rn-egg__caption { display: block; }
+.rn-egg__photo-credit { display: block; font-size: 13px; color: var(--rn-fg-muted); }
+.rn-egg__sources ol, .rn-egg__credits ol { margin: 0; padding-inline-start: 2.25em; }
+.rn-egg__sources li, .rn-egg__credits li { margin-bottom: 8px; line-height: 1.45; }
+.rn-egg__host { color: var(--rn-fg-muted); font-size: 13px; overflow-wrap: anywhere; }
+.rn-egg__host::before { content: "("; }
+.rn-egg__host::after { content: ")"; }
+.rn-egg__disclaimer { font-size: 14px; color: var(--rn-fg-muted); }
+.rn-egg :target { scroll-margin-top: 24px; }
+.rn-egg__pair { display: grid; grid-template-columns: var(--egg-photo-w) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 700px) {
+  .rn-egg__pair { display: block; }
+}
+@media (forced-colors: active) { .rn-egg__fig img { outline: 1px solid CanvasText; } }
+
+/* ---------- 2001 Horizon portal (§3.4) ---------- */
+.rn-egg--y2001 { max-width: 984px; }
+
+/* task pane: link rows meet the 24px target minimum (WCAG 2.5.8) */
+.rn-egg-tasks { margin: 0; list-style: none; gap: 2px; }
+.rn-egg-tasks li { display: flex; align-items: center; min-height: 24px; }
+.rn-egg-tasks a { display: flex; align-items: center; min-height: 24px; color: #1A4FB8; }
+.rn-egg-tasks a:visited { color: #6A3AB8; }
+.rn-egg-tasks__note { color: var(--rn-fg-muted); }
+
+/* banner: glossy blue strip; 18px top padding keeps the h1 off the 3px highlight */
+.rn-egg__head { margin-bottom: 16px; }
+.rn-egg-banner {
+  padding: 18px 20px 16px; border-radius: 6px;
+  background: linear-gradient(in oklab, #3A7BEA 0, #2259D0 3px, #2259D0 60%, #1A4FB8 100%);
+  box-shadow: 0 1px 2px rgb(11 30 80 / 0.25);
+}
+.rn-page .rn-egg-banner h1 { margin: 0; color: #FFFFFF; font: 700 24px/1.2 var(--rn-stack-sans01); }
+.rn-egg--y2001 .rn-egg__dek { margin: 10px 0 0; }
+
+/* content panels: white, gradient header strip that is the h2 itself */
+.rn-panel.rn-egg-panel { padding: 0; margin: 0 0 16px; background: #FFFFFF; overflow: hidden; }
+.rn-page h2.rn-egg-panel__head {
+  margin: 0; padding: 8px 14px; border-bottom: 1px solid #C6D3F7;
+  background: linear-gradient(in oklab, #FFFFFF, #C6D3F7); color: #0B3F9E;
+}
+.rn-egg--y2001 .rn-egg__kicker { display: inline; margin: 0 8px 0 0; font-size: 12px; color: #0B3F9E; }
+.rn-egg-panel__body { padding: 14px 16px; }
+.rn-egg-panel__body > :last-child, .rn-egg__copy > :last-child { margin-bottom: 0; }
+
+/* subjects: 240px photo on the left; stacked and centred below 700px */
+.rn-egg--y2001 .rn-egg__pair { --egg-photo-w: 240px; }
+.rn-egg--y2001 .rn-egg__fig { width: 240px; max-width: 100%; margin-bottom: 0; }
+.rn-egg--y2001 .rn-egg__fig img { width: 240px; border: 1px solid #C6D3F7; border-radius: 3px; outline: 0; }
+.rn-egg--y2001 .rn-egg__fig figcaption, .rn-egg--y2001 .rn-egg__photo-credit { font-size: 13px; color: #555249; }
+@media (max-width: 700px) {
+  .rn-egg--y2001 .rn-egg__fig { margin: 0 auto 16px; }
+}
+
+.rn-egg__license-note { margin-top: 12px; font-size: 14px; color: var(--rn-fg-muted); }
+.rn-egg--y2001 .rn-egg__disclaimer { margin: 4px 0 0; }
+
+@media (forced-colors: active) {
+  .rn-egg--y2001 .rn-egg__fig img { border-color: CanvasText; }
+  .rn-page h2.rn-egg-panel__head { border-bottom-color: CanvasText; }
+}
+
+/* keep both task panels at the top of the stretched blue column (the skin's grid would spread its rows) */
+.rn-egg--y2001 .rn-taskpane { align-content: start; }
+/* the measure cap is for reading text, not the task pane's head strips and rows */
+.rn-egg .rn-taskpane :is(p, li) { max-width: none; }

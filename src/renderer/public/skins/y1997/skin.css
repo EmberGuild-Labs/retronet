@@ -190,6 +190,53 @@
 :root[data-skin="y1997"][data-reduced-motion="true"] .rn-icon[data-icon="loading"] { animation: none; }
 }
 
+/* ---------- menus (A4, DESIGN-MENUS 2): per-skin --rn-menu-* tokens. Shared rules live in base/skin.css. ---------- */
+@layer rn-skin {
+:root[data-skin="y1997"] {
+  --rn-menu-font: 400 13px/1.25 var(--rn-stack-sans97);
+  --rn-menu-bg: #C0C0C0;
+  --rn-menu-fg: #000000;
+  --rn-menu-fg-muted: #3F3F3F;
+  --rn-menu-fg-disabled: #686868;
+  --rn-menu-hl-bg: #000080;
+  --rn-menu-hl-fg: #FFFFFF;
+  --rn-menu-frame: inset 1px 1px 0 #DFDFDF, inset -1px -1px 0 #000000, inset 2px 2px 0 #FFFFFF, inset -2px -2px 0 #808080;
+  --rn-menu-pad: 3px;
+  --rn-menu-sep: linear-gradient(#808080, #808080) center 3px / 100% 1px no-repeat, linear-gradient(#FFFFFF, #FFFFFF) center 4px / 100% 1px no-repeat;
+  --rn-menu-sep-margin: 0 2px;
+  --rn-menu-scroll-thumb: #808080;
+  --rn-menu-scroll-track: #DFDFDF;
+  --rn-menu-check-clip: polygon(0 43%, 29% 71%, 86% 0, 100% 0, 100% 29%, 29% 100%, 0 71%);
+  --rn-menu-check-w: 7px;
+  --rn-menu-check-h: 7px;
+  --rn-menu-radio-clip: circle(50%);
+  --rn-menu-radio-w: 6px;
+  --rn-menu-radio-h: 6px;
+  --rn-menu-radius: 0;
+  --rn-menu-item-radius: 0;
+  --rn-menu-item-h: 24px;
+  --rn-menu-item-inset: 0;
+  --rn-menu-shadow: 0 0 #0000;
+  --rn-menu-disabled-shadow: 1px 1px 0 #FFFFFF;
+  --rn-menu-hl-edge: none;
+}
+:root[data-skin="y1997"][data-incognito="true"]:not([data-surface="page"]) {
+  --rn-menu-bg: #2B2440;
+  --rn-menu-fg: #FFFFFF;
+  --rn-menu-fg-muted: #C9C0E0;
+  --rn-menu-fg-disabled: #9389B3;
+  --rn-menu-disabled-shadow: 1px 1px 0 #15111F;
+  --rn-menu-hl-bg: #F5E9A8;
+  --rn-menu-hl-fg: #000000;
+  --rn-menu-frame: 0 0 0 1px #8A7DBA, inset 1px 1px 0 #5A4D85, inset -1px -1px 0 #000000, inset 2px 2px 0 #43386A, inset -2px -2px 0 #15111F;
+  --rn-menu-sep: linear-gradient(#15111F, #15111F) center 3px / 100% 1px no-repeat, linear-gradient(#5A4D85, #5A4D85) center 4px / 100% 1px no-repeat;
+  --rn-menu-scroll-thumb: #5A4D85;
+  --rn-menu-scroll-track: #1E1930;
+}
+/* accelerator column: the shortcut chips render as plain text inside a menu (2.6). Specificity beats the skin .rn-kbd rule. */
+:root[data-skin="y1997"] .rn-menu .rn-menu__accel .rn-kbd { all: unset; font: inherit; font-weight: 400; color: inherit; }
+}
+
 /* ICONS:BEGIN (generated from the icons/ folder; one rule per icon) */
 @layer rn-skin {
 :root[data-skin="y1997"] .rn-icon[data-icon="audio"] { background-image: url("icons/audio.svg"); }

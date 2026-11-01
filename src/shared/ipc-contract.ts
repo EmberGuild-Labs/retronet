@@ -6,6 +6,7 @@
 import { z } from 'zod'
 import { COMMAND_IDS, type CommandInfo, type Platform } from './commands'
 import { SettingsPatchSchema, SettingsStrictSchema, isAllowedAddress, type Settings } from './settings'
+import { MenuItemIdSchema, MenuSpecSchema } from './menu-model'
 import { SKIN_IDS } from './skins'
 import type { SecurityState } from './url-safety'
 import { GROUP_COLORS, PAGE_HOSTS, UI_HOSTS, type Caller, type PageHost } from './types'
@@ -198,7 +199,9 @@ export const OverlayEventSchema = z.discriminatedUnion('kind', [
   /** S11: HTML fullscreen entered; a small non-focused notice "<host> is now full screen. Press Esc to exit." (~3 s). */
   z.object({ kind: z.literal('fullscreen-notice'), host: z.string() }),
   /** Q3: HTTP Basic/Digest (or proxy) sign-in; answered with httpAuth.respond using the same id. */
-  z.object({ kind: z.literal('http-auth'), id: IdSchema, host: z.string(), realm: z.string(), isProxy: z.boolean() })
+  z.object({ kind: z.literal('http-auth'), id: IdSchema, host: z.string(), realm: z.string(), isProxy: z.boolean() }),
+  /** PLAN-FINAL 1.2: a themed menu (main keeps the actions; the overlay answers menu.pick with an item id). */
+  z.object({ kind: z.literal('menu'), menu: MenuSpecSchema })
 ])
 
 export const HistoryEntrySchema = z.object({
@@ -275,6 +278,45 @@ export const AppInfoSchema = z.object({
   arch: z.string(),
   packaged: z.boolean()
 })
+
+/** Extra round (PLAN-EXTRA 2): `defaultBrowser.status`. `reason` says why `supported` is false. */
+export const DefaultBrowserStatusSchema = z.object({
+  supported: z.boolean(),
+  isDefault: z.boolean(),
+  reason: z.enum(['unpackaged', 'platform']).optional()
+})
+
+/** `bookmarks.import`: the file comes from a native open dialog in main, never from IPC (AC49). */
+export const BookmarksImportResultSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('cancelled') }),
+  z.object({
+    status: z.literal('imported'),
+    folderId: IdSchema,
+    folderTitle: z.string(),
+    added: NonNegInt,
+    duplicates: NonNegInt,
+    unsupported: NonNegInt,
+    truncated: z.boolean()
+  })
+])
+
+/** `bookmarks.export`: the path comes from a native save dialog in main. */
+export const BookmarksExportResultSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('cancelled') }),
+  z.object({ status: z.literal('exported'), count: NonNegInt })
+])
+
+export const UpdateErrorSchema = z.enum(['network', 'timeout', 'invalid-feed', 'too-large', 'busy'])
+
+/** `updates.check` (AC52). Only ever runs from the About page's "Check for updates" click (AC53). */
+export const UpdateCheckResultSchema = z.discriminatedUnion('state', [
+  z.object({ state: z.literal('up-to-date'), current: z.string(), latest: z.string() }),
+  z.object({ state: z.literal('available'), current: z.string(), latest: z.string(), notes: z.string() }),
+  z.object({ state: z.literal('error'), current: z.string(), error: UpdateErrorSchema })
+])
+
+/** Shell event asking the shell to play a sound (AC55). Main decides when; the shell only plays. */
+export const SoundEventSchema = z.strictObject({ kind: z.literal('dialup') })
 
 /** D3: the range applies to history and downloads; cookies and cache are always all-time. */
 export const ClearRangeSchema = z.enum(['hour', 'day', 'week', 'all'])
@@ -356,6 +398,9 @@ const OptionalTabRef = z.strictObject({ tabId: TabIdSchema.optional() })
 const GroupRef = z.strictObject({ groupId: IdSchema })
 const IdRef = z.strictObject({ id: IdSchema })
 const MenuAt = { x: Coord, y: Coord }
+/** Shell menu triggers (PLAN-FINAL 1.2): the trigger's rect (button menus open below it) and keyboard-opened. */
+const MenuTrigger = { ...MenuAt, anchor: RectSchema.strict().optional(), keyboard: z.boolean().optional() }
+const MenuRef = z.strictObject({ menuId: z.string().uuid() })
 
 export const IPC_METHODS = {
   // Tabs (shell; the overlay palette switches tabs)
@@ -384,7 +429,7 @@ export const IPC_METHODS = {
   'tabs.reload': method(UI, z.strictObject({ tabId: TabIdSchema.optional(), ignoreCache: z.boolean().optional() }), Void),
   'tabs.stop': method(UI, OptionalTabRef, Void),
   'tabs.home': method(UI, OptionalTabRef, Void),
-  'tabs.contextMenu': method(SHELL, z.strictObject({ tabId: TabIdSchema, ...MenuAt }), Void),
+  'tabs.contextMenu': method(SHELL, z.strictObject({ tabId: TabIdSchema, ...MenuTrigger }), Void),
 
   // Groups
   'groups.create': method(
@@ -406,7 +451,7 @@ export const IPC_METHODS = {
   'groups.removeTab': method(UI, TabRef, Void),
   'groups.ungroup': method(UI, GroupRef, Void),
   'groups.close': method(UI, GroupRef, Void),
-  'groups.contextMenu': method(SHELL, z.strictObject({ groupId: IdSchema, ...MenuAt }), Void),
+  'groups.contextMenu': method(SHELL, z.strictObject({ groupId: IdSchema, ...MenuTrigger }), Void),
   /** Chip click: open the group editor in the overlay, anchored to the chip. */
   'groups.edit': method(SHELL, z.strictObject({ groupId: IdSchema, anchor: RectSchema.strict() }), Void),
 
@@ -434,10 +479,10 @@ export const IPC_METHODS = {
   ),
 
   // Profiles, bookmarks, layout, overlay
-  'profiles.menu': method(SHELL, z.strictObject(MenuAt), Void),
+  'profiles.menu': method(SHELL, z.strictObject(MenuTrigger), Void),
   'bookmarks.toggleCurrent': method(SHELL, Empty, z.object({ bookmarked: z.boolean() })),
   'bookmarks.bar': method(SHELL, Empty, z.object({ items: z.array(BookmarkNodeSchema) })),
-  'bookmarks.barFolderMenu': method(SHELL, z.strictObject({ folderId: IdSchema, ...MenuAt }), Void),
+  'bookmarks.barFolderMenu': method(SHELL, z.strictObject({ folderId: IdSchema, ...MenuTrigger }), Void),
   /** Heights of the shell's top and bottom bars; main lays the tab view out between them. */
   'layout.setInsets': method(
     SHELL,
@@ -468,6 +513,24 @@ export const IPC_METHODS = {
     }),
     Void
   ),
+
+  // Themed menus (PLAN-FINAL 1.2). Main runs only the action it registered for (window, menuId, itemId).
+  'menu.pick': method(
+    OVERLAY,
+    z.strictObject({
+      menuId: z.string().uuid(),
+      itemId: MenuItemIdSchema,
+      mods: z.strictObject({ meta: z.boolean(), ctrl: z.boolean(), shift: z.boolean(), alt: z.boolean() }),
+      /** 0 = primary click or keyboard, 1 = middle click. */
+      button: z.union([z.literal(0), z.literal(1)])
+    }),
+    Void
+  ),
+  /** Closes only that menu, so a late dismiss never closes a newer one. */
+  'menu.dismiss': method(OVERLAY, MenuRef, Void),
+
+  // Hidden pages (PLAN-FINAL 1.3, D-B3): open the era's egg page; split by caller because shell methods take no page host.
+  'eggs.open': method(SHELL, z.strictObject({ era: SkinIdSchema }), Void),
 
   // ---- Internal pages (capability map, PLAN 1.5) ----
   'skin.get': method(PAGES, Empty, SkinEventSchema.extend({ platform: z.enum(['mac', 'win']) })),
@@ -521,6 +584,9 @@ export const IPC_METHODS = {
     Void
   ),
   'bookmarks.remove': method(at('bookmarks'), IdRef, Void),
+  /** Bookmark-file (HTML) import/export. Main shows the native dialog; no path crosses IPC (AC49, AC50). */
+  'bookmarks.import': method(at('bookmarks'), Empty, BookmarksImportResultSchema),
+  'bookmarks.export': method(at('bookmarks'), Empty, BookmarksExportResultSchema),
 
   'downloads.list': method(at('downloads'), Empty, z.object({ items: z.array(DownloadItemSchema) })),
   'downloads.pause': method(at('downloads'), IdRef, Void),
@@ -564,6 +630,18 @@ export const IPC_METHODS = {
   /** Main shows the native confirmation; resolves `{deleted:false}` if the user cancels. */
   'profiles.delete': method(at('settings'), z.strictObject({ id: ProfileIdSchema }), z.object({ deleted: z.boolean() })),
   'dialog.pickFolder': method(at('settings'), Empty, z.object({ path: z.string().nullable() })),
+  /** AC47: whether RetroNet handles http and https; `set` asks the OS (macOS shows its own confirmation). */
+  'defaultBrowser.status': method(at('settings'), Empty, DefaultBrowserStatusSchema),
+  'defaultBrowser.set': method(at('settings'), Empty, z.object({ requested: z.boolean(), isDefault: z.boolean() })),
+
+  /** AC52: `enabled` is false while the feed URL is unset (the About page then shows no update UI). */
+  'updates.status': method(at('about'), Empty, z.object({ enabled: z.boolean(), current: z.string() })),
+  /** E_UNAVAILABLE with no feed configured. */
+  'updates.check': method(at('about'), Empty, UpdateCheckResultSchema),
+  /** Opens the last `available` result's URL in a new tab (no URL from IPC); E_NOT_FOUND otherwise. */
+  'updates.openDownload': method(at('about'), Empty, Void),
+  /** About page hint (D-B3): same as eggs.open. */
+  'eggs.openFromPage': method(at('about'), z.strictObject({ era: SkinIdSchema }), Void),
 
   'commands.list': method(
     at('shortcuts'),
@@ -665,7 +743,9 @@ export const SHELL_EVENTS = {
   overlay: OverlayEventSchema,
   ui: UiEventSchema,
   /** The window profile's bookmarks changed (no payload): the bookmark bar re-reads bookmarks.bar. */
-  bookmarks: z.null()
+  bookmarks: z.null(),
+  /** AC55: play the dial-up sound (main checks the setting, incognito, mute, user-started load and throttle). */
+  sound: SoundEventSchema
 } as const
 export type ShellEventName = keyof typeof SHELL_EVENTS
 export type ShellEventPayload<E extends ShellEventName> = z.output<(typeof SHELL_EVENTS)[E]>

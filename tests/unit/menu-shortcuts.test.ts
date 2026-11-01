@@ -234,3 +234,40 @@ describe('shortcut matcher', () => {
     expect(isEscape({ ...key({ key: 'Escape', code: 'Escape' }), type: 'keyUp' })).toBe(false)
   })
 })
+
+describe('view source (AC54)', () => {
+  const find = (items: MenuItemConstructorOptions[]) => items.find((i) => i.id === 'page.viewSource')
+
+  it('maps only http(s) URLs to view-source:', async () => {
+    const { viewSourceUrlFor } = await import('../../src/main/commands/menu')
+    expect(viewSourceUrlFor('https://example.com/a?b=1')).toBe('view-source:https://example.com/a?b=1')
+    expect(viewSourceUrlFor('http://example.com/')).toBe('view-source:http://example.com/')
+    for (const u of ['retronet://settings/', 'file:///etc/hosts', 'about:blank', 'view-source:https://a.com/', 'javascript:1', '', 'https://']) {
+      expect(viewSourceUrlFor(u)).toBeNull()
+    }
+  })
+
+  it('strips inner userinfo (AC73, E1/R34)', async () => {
+    const { viewSourceUrlFor } = await import('../../src/main/commands/menu')
+    expect(viewSourceUrlFor('http://u:p@h.test/')).toBe('view-source:http://h.test/')
+    expect(viewSourceUrlFor('https://u@h.test/x?y#z')).toBe('view-source:https://h.test/x?y#z')
+    expect(viewSourceUrlFor('view-source:http://u:p@h.test/')).toBeNull()
+    expect(viewSourceUrlFor('view-source:view-source:')).toBeNull()
+    expect(viewSourceUrlFor('file:///x')).toBeNull()
+  })
+
+  it('is in View > Developer, enabled only for http(s) active tabs', () => {
+    expect(find(build({ activeUrl: 'https://example.com/' }).items)?.enabled).toBe(true)
+    expect(find(build({ activeUrl: 'retronet://history/' }).items)?.enabled).toBe(false)
+    expect(find(build({ activeUrl: 'file:///x.html' }).items)?.enabled).toBe(false)
+    expect(find(build().items)?.enabled).toBeUndefined()
+  })
+
+  it('click runs the command; the chord matches on both platforms', () => {
+    const b = build({ activeUrl: 'https://example.com/' })
+    find(b.items)?.click?.({} as never, undefined, {} as never)
+    expect(b.runs).toEqual([['page.viewSource', undefined]])
+    expect(acceleratorIndex('win').get(normalizeAccelerator('Ctrl+U'))).toBe('page.viewSource')
+    expect(acceleratorIndex('mac').get(normalizeAccelerator('Cmd+Alt+U'))).toBe('page.viewSource')
+  })
+})

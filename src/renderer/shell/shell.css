@@ -37,9 +37,16 @@ html, body { height: 100%; overflow: hidden; }
 :root[data-skin="y1997"] .rn-statusbar__progress[data-phase="waiting"] .rn-progress__fill { width: 40px; }
 :root[data-skin="y1997"] .rn-statusbar__progress[data-phase="transferring"] .rn-progress__fill { width: 80px; }
 
+/* 1999 candy roll: percentage widths by phase (DESIGN-Y1999 3). */
+:root[data-skin="y1999"] .rn-statusbar__progress .rn-progress__fill { width: 10%; }
+:root[data-skin="y1999"] .rn-statusbar__progress[data-phase="contacting"] .rn-progress__fill { width: 20%; }
+:root[data-skin="y1999"] .rn-statusbar__progress[data-phase="waiting"] .rn-progress__fill { width: 40%; }
+:root[data-skin="y1999"] .rn-statusbar__progress[data-phase="transferring"] .rn-progress__fill { width: 80%; }
+
 /* Small screens: below ~760px, 1997's big buttons would push the throbber off; labels stay, Downloads goes. */
 @media (max-width: 760px) {
-  :root[data-skin="y1997"] .rn-toolbar [data-action="downloads"] { display: none; }
+  :root:is([data-skin="y1997"], [data-skin="y1999"]) .rn-toolbar [data-action="downloads"] { display: none; }
+  :root[data-skin="y1999"] .rn-omnibox__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
 /* Omnibox text box (D11): the input plus an aria-hidden twin that draws the URL with the host emphasised and the
@@ -65,7 +72,7 @@ html, body { height: 100%; overflow: hidden; }
 .rn-omnibox__host { color: var(--rn-field-fg); }
 @media (forced-colors: none) { .rn-omnibox--emphasis .rn-omnibox__input:not(:focus) { color: transparent; } }
 .rn-omnibox--emphasis .rn-omnibox__input:not(:focus) + .rn-omnibox__display { display: flex; }
-:root:is([data-skin="y1994"], [data-skin="y1997"]) .rn-omnibox__display { -webkit-font-smoothing: none; }
+:root:is([data-skin="y1994"], [data-skin="y1997"], [data-skin="y1999"]) .rn-omnibox__display { -webkit-font-smoothing: none; }
 :root[data-skin="y2001"] .rn-omnibox__display { padding-top: 1px; }
 
 /* Inline omnibox error (Q7), between the text and the star; the field keeps its text so it can be fixed. */
@@ -81,3 +88,7 @@ html, body { height: 100%; overflow: hidden; }
 @media (forced-colors: active) {
   .rn-omnibox--emphasis .rn-omnibox__input:not(:focus) + .rn-omnibox__display { display: none; }
 }
+
+/* 1999 joined Back+Forward capsule (shape only; materials come from y1999/skin.css). */
+:root[data-skin="y1999"] .rn-toolbar [data-action="back"] { width: 40px; border-radius: 18px 0 0 18px; }
+:root[data-skin="y1999"] .rn-toolbar [data-action="forward"] { width: 40px; border-radius: 0 18px 18px 0; margin-inline-start: -1px; }

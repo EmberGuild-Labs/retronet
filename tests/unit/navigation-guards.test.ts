@@ -1,14 +1,36 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// tab.ts (committedUrlFor) pulls in Electron values at load time; the guards themselves only use types.
+vi.mock('electron', () => {
+  class Stub {}
+  return {
+    app: { isPackaged: false, getPath: () => '/tmp', on: vi.fn() },
+    BrowserWindow: Stub,
+    WebContentsView: Stub,
+    dialog: {},
+    ipcMain: { handle: vi.fn(), on: vi.fn() },
+    protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
+    net: {},
+    screen: {},
+    session: {},
+    shell: {},
+    webContents: { getAllWebContents: () => [] }
+  }
+})
+
 import {
   decideBrowserNavigation,
   decideFrameNavigation,
+  decidePdfViewerFrame,
   decidePageNavigation,
   decideRedirect,
   decideRetronetSubresource,
   decideWindowOpen,
   parsePopupFeatures,
+  PDF_VIEWER_EXTENSION_ID,
   type NavDecision
 } from '../../src/main/security/navigation-guards'
+import { committedUrlFor } from '../../src/main/tabs/tab'
 
 const WEB = 'https://example.com/page'
 const INTERNAL = 'retronet://newtab/'
@@ -31,7 +53,24 @@ describe('decideBrowserNavigation (omnibox, bookmarks, commands)', () => {
     ['tel:+15551234', {}, 'external'],
     ['ftp://x.test/', {}, 'block'],
     ['zoommtg://join', {}, 'block'],
-    ['not a url', {}, 'block']
+    ['not a url', {}, 'block'],
+    // AC54 view-source: http(s) inner URLs only, re-checked; typed never unlocks file: inside it.
+    ['view-source:https://example.com/', {}, 'allow'],
+    ['view-source:http://127.0.0.1:8080/a', {}, 'allow'],
+    ['VIEW-SOURCE:HTTPS://example.com/', {}, 'allow'],
+    ['view-source:file:///etc/hosts', {}, 'block'],
+    ['view-source:file:///etc/hosts', { typed: true }, 'block'],
+    ['view-source:retronet://newtab/', {}, 'block'],
+    ['view-source:retronet://shell/', {}, 'block'],
+    ['view-source:view-source:https://example.com/', {}, 'block'],
+    ['view-source:javascript:alert(1)', {}, 'block'],
+    ['view-source:data:text/html,x', {}, 'block'],
+    ['view-source:about:blank', {}, 'block'],
+    ['view-source:mailto:a@b.test', {}, 'block'],
+    ['view-source:', {}, 'block'],
+    // SPIKE-X1: a browser-initiated loadURL of the PDF viewer would load it (broken); it must stay blocked.
+    [`chrome-extension://${PDF_VIEWER_EXTENSION_ID}/index.html`, {}, 'block'],
+    [`chrome-extension://${PDF_VIEWER_EXTENSION_ID}/`, { typed: true }, 'block']
   ]
   it.each(cases)('%s %o -> %s', (url, opts, want) => {
     expect(decideBrowserNavigation(url, opts)).toBe(want)
@@ -95,6 +134,91 @@ describe('decideFrameNavigation (subframes)', () => {
   it('allows retronet iframes only under a retronet parent, never shell/overlay', () => {
     expect(decideFrameNavigation('retronet://newtab/', INTERNAL)).toBe(true)
     expect(decideFrameNavigation('retronet://shell/', INTERNAL)).toBe(false)
+  })
+})
+
+describe('decidePdfViewerFrame (SPIKE-X1 §1)', () => {
+  const ID = PDF_VIEWER_EXTENSION_ID
+  const INDEX = `chrome-extension://${ID}/index.html`
+  const UUID = '0f8fad5b-d9cb-469f-a165-70867728950e'
+  const STREAM = `chrome-extension://${ID}/${UUID}`
+  const PDF = 'https://example.com/doc.pdf'
+  it('allows the stream frame under the viewer index under an http(s)/file PDF frame', () => {
+    expect(decidePdfViewerFrame(STREAM, INDEX, PDF)).toBe(true)
+    expect(decidePdfViewerFrame(STREAM, INDEX, 'http://127.0.0.1:8080/x.pdf')).toBe(true)
+    expect(decidePdfViewerFrame(STREAM, INDEX, 'file:///tmp/a.pdf')).toBe(true)
+  })
+  it.each([
+    ['another extension id', `chrome-extension://abcdefghijklmnopabcdefghijklmnop/${UUID}`],
+    ['index.html itself', INDEX],
+    ['the root', `chrome-extension://${ID}/`],
+    ['another path', `chrome-extension://${ID}/foo`],
+    ['main.js', `chrome-extension://${ID}/main.js`],
+    ['uppercase uuid', `chrome-extension://${ID}/${UUID.toUpperCase()}`],
+    ['uuid plus extra path', `chrome-extension://${ID}/${UUID}/x`],
+    ['extra path before the uuid', `chrome-extension://${ID}/a/${UUID}`],
+    ['uuid with a query', `${STREAM}?x=1`],
+    ['uuid with an empty query', `${STREAM}?`],
+    ['uuid with a hash', `${STREAM}#p`],
+    ['uuid with userinfo', `chrome-extension://u:p@${ID}/${UUID}`],
+    ['uuid with a port', `chrome-extension://${ID}:99/${UUID}`],
+    ['uppercase id', `chrome-extension://${ID.toUpperCase()}/${UUID}`],
+    ['http with the same path', `https://${ID}/${UUID}`],
+    ['garbage', 'not a url']
+  ])('rejects %s', (_label, url) => {
+    expect(decidePdfViewerFrame(url, INDEX, PDF)).toBe(false)
+  })
+  it.each([
+    ['the tab main frame (http)', PDF],
+    ['the viewer root', `chrome-extension://${ID}/`],
+    ['index.html with a query', `${INDEX}?a`],
+    ['another extension index', 'chrome-extension://abcdefghijklmnopabcdefghijklmnop/index.html'],
+    ['a retronet: page', INTERNAL],
+    ['a nested stream frame', STREAM],
+    ['no parent', null]
+  ])('rejects a parent that is %s', (_label, parent) => {
+    expect(decidePdfViewerFrame(STREAM, parent, PDF)).toBe(false)
+  })
+  it.each([
+    ['retronet:', 'retronet://newtab/'],
+    ['data:', 'data:application/pdf;base64,JVBERi0='],
+    ['blob: (manager decision U1: no blob PDFs)', 'blob:https://example.com/0f8fad5b-d9cb-469f-a165-70867728950e'],
+    ['about:', 'about:blank'],
+    ['chrome-extension:', INDEX],
+    ['view-source:', 'view-source:https://example.com/doc.pdf'],
+    ['null', null],
+    ['undefined', undefined]
+  ])('rejects a %s grandparent', (_label, grand) => {
+    expect(decidePdfViewerFrame(STREAM, INDEX, grand)).toBe(false)
+  })
+  it('the generic frame rule still refuses every chrome-extension: URL', () => {
+    for (const url of [STREAM, INDEX, `chrome-extension://${ID}/`]) expect(decideFrameNavigation(url, INDEX)).toBe(false)
+  })
+})
+
+describe('view-source: in page, frame and redirect guards (AC54)', () => {
+  const VS = 'view-source:https://example.com/'
+  it('a page can never navigate to view-source:, not even from a source view', () => {
+    for (const cur of [WEB, INTERNAL, VS]) {
+      for (const url of [VS, 'view-source:http://a.test/', 'VIEW-SOURCE:https://a.test/', 'view-source:file:///etc/hosts']) {
+        expect(decidePageNavigation(url, { kind: 'tab', currentUrl: cur }), `${cur} -> ${url}`).toBe('block')
+      }
+    }
+  })
+  it('iframes and redirects to view-source: are refused', () => {
+    expect(decideFrameNavigation(VS, WEB)).toBe(false)
+    expect(decideFrameNavigation(VS, VS)).toBe(false)
+    expect(decideRedirect(VS)).toBe(false)
+  })
+})
+
+describe('committedUrlFor (tab.ts, SPIKE-X1 §2)', () => {
+  it('a source view commits as its view-source: address; anything else as the event URL', () => {
+    expect(committedUrlFor('http://h/page.html', 'view-source:http://h/page.html')).toBe('view-source:http://h/page.html')
+    expect(committedUrlFor('http://h/page.html', 'http://h/page.html')).toBe('http://h/page.html')
+    // A commit that is not the source view's page (a later navigation) keeps the event URL.
+    expect(committedUrlFor('http://h/other.html', 'view-source:http://h/page.html')).toBe('http://h/other.html')
+    expect(committedUrlFor('https://a.test/', '')).toBe('https://a.test/')
   })
 })
 
@@ -164,6 +288,22 @@ describe('decideWindowOpen', () => {
     for (const url of ['file:///etc/hosts', 'javascript:alert(1)', 'data:text/html,x', 'foo:bar', '::bad']) {
       expect(decideWindowOpen(d(url, 'foreground-tab'), tabCtx(WEB))).toEqual({ action: 'deny' })
     }
+  })
+  it('AC54: view-source: is always denied; a source view opens plain tabs without an opener', () => {
+    for (const opener of [WEB, INTERNAL, 'view-source:https://example.com/']) {
+      for (const url of ['view-source:https://a.test/', 'view-source:file:///etc/hosts', 'view-source:retronet://newtab/']) {
+        expect(decideWindowOpen(d(url, 'foreground-tab'), tabCtx(opener))).toEqual({ action: 'deny' })
+      }
+    }
+    const src = tabCtx('view-source:https://example.com/')
+    expect(decideWindowOpen(d('https://example.com/other', 'foreground-tab'), src)).toEqual({ action: 'tab', background: false, withOpener: false })
+    expect(decideWindowOpen(d('https://a.test/', 'new-window', 'width=400,height=300'), src)).toEqual({
+      action: 'tab',
+      background: false,
+      withOpener: false
+    })
+    expect(decideWindowOpen(d('https://a.test/', 'background-tab'), src)).toEqual({ action: 'tab', background: true, withOpener: false })
+    expect(decideWindowOpen(d('retronet://settings/', 'foreground-tab'), src)).toEqual({ action: 'deny' })
   })
   it('the shell and overlay never open windows', () => {
     expect(decideWindowOpen(d('https://a.test/', 'foreground-tab'), { kind: 'ui', openerUrl: 'retronet://shell/' })).toEqual({ action: 'deny' })

@@ -333,3 +333,49 @@ a.rn-tile:visited { color: var(--rn-fg); }
   .rn-panel, .rn-tile, .rn-guestbook-entry, .rn-radio-card { border: 1px solid CanvasText; box-shadow: none !important; }
   .rn-odometer__digit { forced-color-adjust: none; }
 }
+
+/* ---------- themed dropdown (A11, DESIGN-MENUS 8): shared structure fallback + forced colors ----------
+   Per-skin visuals live in each skin's pages.css. Skins set --rn-sel-check (clip-path), --rn-sel-check-w/-h,
+   --rn-sel-pad (listbox padding) and --rn-sel-gap (button to list gap). */
+.rn-select { position: relative; display: inline-block; min-width: 200px; vertical-align: middle; }
+.rn-select__button {
+  box-sizing: border-box; position: relative; display: flex; align-items: center; height: 28px;
+  padding-inline: 8px 0; cursor: default; user-select: none; -webkit-user-select: none;
+}
+.rn-select__value { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rn-select__value--placeholder { color: var(--rn-fg-muted); }
+.rn-select__chevron { flex: none; position: relative; align-self: stretch; }
+.rn-select__chevron::before { content: ""; position: absolute; display: block; }
+.rn-select__listbox {
+  box-sizing: border-box; position: absolute; z-index: 10; inset-inline-start: 0; top: 100%;
+  min-width: 100%; max-width: 480px; margin: var(--rn-sel-gap, 0px) 0 0;
+  max-height: calc(24px * 10 + 2 * var(--rn-sel-pad, 0px) + 2px);
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; outline: none;
+}
+.rn-select__listbox[hidden] { display: none; }
+.rn-select__listbox[data-placement="above"] { top: auto; bottom: 100%; margin: 0 0 var(--rn-sel-gap, 0px); }
+.rn-select__option {
+  box-sizing: border-box; display: flex; align-items: center; height: 24px; padding-inline: 0 8px;
+  white-space: nowrap; cursor: default;
+}
+.rn-select__check { flex: none; position: relative; align-self: stretch; width: 22px; }
+.rn-select__check::before {
+  content: ""; display: none; position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: var(--rn-sel-check-w, 7px); height: var(--rn-sel-check-h, 7px);
+  background: currentColor; clip-path: var(--rn-sel-check);
+}
+.rn-select__option[aria-selected="true"] .rn-select__check::before { display: block; }
+.rn-select__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.rn-select__option[aria-disabled="true"] { cursor: default; }
+.rn-select__button[aria-disabled="true"] { cursor: default; }
+
+@media (forced-colors: active) {
+  .rn-select__button { border: 1px solid ButtonBorder; background: ButtonFace; color: ButtonText; box-shadow: none; }
+  .rn-select__button:focus-visible { outline: 2px solid Highlight; outline-offset: 1px; }
+  .rn-select__button[aria-disabled="true"] { color: GrayText; border-color: GrayText; }
+  .rn-select__listbox { background: Canvas; color: CanvasText; border: 1px solid CanvasText; box-shadow: none; }
+  .rn-select__option--active { background: Highlight; color: HighlightText; forced-color-adjust: none; }
+  .rn-select__option[aria-disabled="true"] { color: GrayText; }
+  .rn-select__chevron::before, .rn-select__check::before { forced-color-adjust: none; background: currentColor; }
+  .rn-select__chevron { background: none; box-shadow: none; border: 0; }
+}

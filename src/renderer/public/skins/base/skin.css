@@ -712,3 +712,47 @@ select.rn-input { padding-inline-end: 22px; appearance: none; background-repeat:
   :focus-visible, .rn-omnibox:focus-within { outline-color: Highlight !important; }
   .rn-throbber { forced-color-adjust: none; }
 }
+
+/* ---------- menus (A4, DESIGN-MENUS 2): shared rules; every colour, size and glyph shape is a --rn-menu-* token ----------
+   Structure (grid, positioning, scroll) lives in overlay/menu.css. No transitions or animation anywhere in a menu (0). */
+.rn-menu, .rn-menu * { transition: none; animation: none; }
+.rn-menu { scrollbar-width: thin; scrollbar-color: var(--rn-menu-scroll-thumb) var(--rn-menu-scroll-track); }
+.rn-menu__item { color: var(--rn-menu-fg); }
+.rn-menu__item--active:not([aria-disabled="true"]), .rn-menu__item[aria-expanded="true"] {
+  background: var(--rn-menu-hl-bg); color: var(--rn-menu-hl-fg); box-shadow: var(--rn-menu-hl-edge);
+}
+.rn-menu__accel { color: var(--rn-menu-fg-muted); }
+.rn-menu__item--active:not([aria-disabled="true"]) .rn-menu__accel, .rn-menu__item[aria-expanded="true"] .rn-menu__accel { color: inherit; }
+.rn-menu__item[aria-disabled="true"] { color: var(--rn-menu-fg-disabled); text-shadow: var(--rn-menu-disabled-shadow); }
+.rn-menu__item[aria-disabled="true"] .rn-menu__accel { color: inherit; }
+/* Placeholder rows ("(Empty)", "(Too deep)") are the only content of their menu: full colour, italic. */
+.rn-menu__item--placeholder[aria-disabled="true"] { color: var(--rn-menu-fg); text-shadow: none; font-style: italic; }
+.rn-menu__separator { height: 8px; margin-inline: var(--rn-menu-sep-margin, 0); background: var(--rn-menu-sep); }
+/* glyphs: currentColor + clip-path, so they follow highlight, disabled and incognito text colour */
+.rn-menu__check, .rn-menu__arrow { display: grid; place-items: center; }
+.rn-menu__item[role="menuitemcheckbox"][aria-checked="true"] .rn-menu__check::before,
+.rn-menu__item[role="menuitemradio"][aria-checked="true"] .rn-menu__check::before,
+.rn-menu__item[aria-haspopup] .rn-menu__arrow::before { content: ""; display: block; background: currentColor; }
+.rn-menu__item[role="menuitemcheckbox"][aria-checked="true"] .rn-menu__check::before {
+  width: var(--rn-menu-check-w); height: var(--rn-menu-check-h); clip-path: var(--rn-menu-check-clip);
+}
+.rn-menu__item[role="menuitemradio"][aria-checked="true"] .rn-menu__check::before {
+  width: var(--rn-menu-radio-w); height: var(--rn-menu-radio-h); clip-path: var(--rn-menu-radio-clip);
+}
+.rn-menu__item[aria-haspopup] .rn-menu__arrow::before { width: 4px; height: 7px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.rn-menu__arrow:dir(rtl)::before { scale: -1 1; }
+:root[data-platform="win32"] .rn-menu__accel .rn-kbd + .rn-kbd::before,
+:root[data-platform="linux"] .rn-menu__accel .rn-kbd + .rn-kbd::before { content: "+"; }
+
+@media (forced-colors: active) {
+  .rn-menu { background: Canvas !important; color: CanvasText; border: 1px solid CanvasText; box-shadow: none !important; }
+  .rn-menu__item { color: CanvasText; }
+  .rn-menu__item--active:not([aria-disabled="true"]), .rn-menu__item[aria-expanded="true"] {
+    background: Highlight !important; color: HighlightText !important; forced-color-adjust: none; box-shadow: none !important;
+  }
+  .rn-menu__item[aria-disabled="true"] { color: GrayText !important; text-shadow: none; }
+  .rn-menu__item--placeholder[aria-disabled="true"] { color: CanvasText !important; }
+  .rn-menu__check::before, .rn-menu__arrow::before { forced-color-adjust: none; background: currentColor !important; }
+  .rn-menu .rn-menu__accel .rn-kbd { border: 0 !important; background: none !important; }
+  .rn-menu__separator { background: CanvasText !important; height: 1px; margin-block: 3.5px; }
+}

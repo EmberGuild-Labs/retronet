@@ -56,6 +56,11 @@ export interface ShowOverlayOptions {
    * relative to its own top-left.
    */
   bounds?: Rectangle
+  /**
+   * PLAN-FINAL 1.2: called once when this event leaves the overlay for any reason: another `showOverlay` replaced
+   * it, `hideOverlay` ran, or the window closed. It must not show or hide the overlay itself.
+   */
+  onDismiss?: () => void
 }
 
 export interface WindowContext {

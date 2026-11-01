@@ -52,5 +52,23 @@
   & .rn-alert { position: relative; padding: 22px 20px 20px; background: var(--rn-bg-page); box-shadow: 0 0 0 1px #000000, var(--rn-bevel-raised); }
   & .rn-alert--danger::before { content: ""; position: absolute; left: 2px; right: 2px; top: 2px; height: 6px; background: repeating-linear-gradient(135deg, #FFFF00 0 8px, #000000 8px 16px); }
   & .rn-alert h1 { color: #000000; }
+
+  /* themed dropdown (DESIGN-MENUS 8): combobox with inner arrow button */
+  --rn-sel-check: polygon(0 43%, 29% 71%, 86% 0, 100% 0, 100% 29%, 29% 100%, 0 71%);
+  --rn-sel-check-w: 7px; --rn-sel-check-h: 7px; --rn-sel-pad: 0px; --rn-sel-gap: 0px;
+  & .rn-select__button { background: #FFFFFF; box-shadow: var(--rn-bevel-field); color: #000000; font: 400 13px/1.2 var(--rn-stack-sans97); padding-inline: 4px 22px; }
+  & .rn-select__value { flex: 0 1 auto; padding: 1px 3px; }
+  & .rn-select__value--placeholder { color: #3F3F3F; }
+  & .rn-select__chevron { position: absolute; inset-block: 2px; inset-inline-end: 2px; width: 16px; background: #C0C0C0; box-shadow: var(--rn-bevel-raised); }
+  & .rn-select__chevron::before { width: 7px; height: 4px; left: 50%; top: 50%; translate: -50% -50%; background: #000000; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+  & .rn-select__button[aria-expanded="true"] .rn-select__chevron { box-shadow: var(--rn-bevel-sunken); }
+  & .rn-select__button[aria-expanded="true"] .rn-select__chevron::before { translate: calc(-50% + 1px) calc(-50% + 1px); }
+  & .rn-select__button:focus-visible { outline: 2px solid #000080; outline-offset: 1px; }
+  & .rn-select__button:focus-visible .rn-select__value { background: #000080; color: #FFFFFF; }
+  & .rn-select__button[aria-disabled="true"] { background: #C0C0C0; color: #686868; text-shadow: 1px 1px 0 #FFFFFF; }
+  & .rn-select__button[aria-disabled="true"] .rn-select__chevron::before { background: #686868; }
+  & .rn-select__listbox { background: #FFFFFF; border: 1px solid #000000; color: #000000; font: 400 13px/1.2 var(--rn-stack-sans97); }
+  & .rn-select__option--active { background: #000080; color: #FFFFFF; }
+  & .rn-select__option[aria-disabled="true"] { color: #686868; }
 }
 }

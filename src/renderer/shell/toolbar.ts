@@ -5,6 +5,7 @@
 import { h, icon } from '../common/dom'
 import type { IpcResult, ShellBridge } from '../common/api'
 import { commandShortcutLabel } from '@shared/commands'
+import { SKIN_TRAITS, traitAttributes } from '@shared/skins'
 import type { CommandId, Platform, SkinId, TabState, WindowSnapshot } from '@shared/types'
 import { GROUP_COLORS, type GroupColor } from '@shared/types'
 import { createThrobber, type Throbber } from './throbber'
@@ -59,6 +60,7 @@ const ACTIONS: Record<Action, ActionDef> = {
 const LAYOUT: Record<SkinId, ReadonlyArray<Action | 'sep'>> = {
   y1994: ['back', 'forward', 'reload', 'home', 'stop', 'find'],
   y1997: ['back', 'forward', 'reload', 'home', 'find', 'downloads', 'stop'],
+  y1999: ['back', 'forward', 'sep', 'reload', 'stop', 'home', 'sep', 'find', 'downloads'],
   y2001: ['back', 'forward', 'sep', 'reload', 'home', 'find', 'downloads', 'stop', 'sep']
 }
 
@@ -117,7 +119,7 @@ export function createToolbar(deps: ToolbarDeps): Toolbar {
     const def = ACTIONS[action]
     const tip = withShortcut(def.label, def.command, platform)
     let btn: HTMLButtonElement
-    if (skin === 'y2001' && (action === 'back' || action === 'forward')) {
+    if (SKIN_TRAITS[skin].roundBackForward && (action === 'back' || action === 'forward')) {
       // Round glossy buttons; Back carries a visible label, Forward is icon-only (DESIGN 2.3).
       btn = h(
         'button',
@@ -125,11 +127,12 @@ export function createToolbar(deps: ToolbarDeps): Toolbar {
         icon(def.icon),
         action === 'back' ? h('span', { class: 'rn-btn__label', text: def.label }) : null
       )
-    } else if (skin === 'y2001') {
+    } else if (SKIN_TRAITS[skin].iconOnlyToolbar) {
+      // y1999: every action is an icon-only gel gumdrop; Back+Forward join into one capsule via CSS.
       btn = h('button', { class: 'rn-btn rn-btn--icon', attrs: { type: 'button', title: tip, 'aria-label': def.label } }, icon(def.icon))
       btn.lastElementChild?.setAttribute('data-size', '24')
     } else {
-      const visible = skin === 'y1997' && def.short ? def.short : def.label
+      const visible = SKIN_TRAITS[skin].shortToolbarLabels && def.short ? def.short : def.label
       btn = h(
         'button',
         {
@@ -152,6 +155,7 @@ export function createToolbar(deps: ToolbarDeps): Toolbar {
   }
 
   function render(skin: SkinId): void {
+    for (const [k, v] of Object.entries(traitAttributes(skin))) document.documentElement.setAttribute(k, v)
     const focusedAction = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('.rn-toolbar [data-action]')?.dataset.action
     buttons = new Map()
     const kids: HTMLElement[] = []
@@ -165,10 +169,24 @@ export function createToolbar(deps: ToolbarDeps): Toolbar {
       kids.push(b)
     })
     profileBtn = h('button', { class: 'rn-btn rn-btn--icon rn-profile-btn', attrs: { type: 'button', 'aria-haspopup': 'menu' } })
-    profileBtn.addEventListener('click', () => {
-      const r = profileBtn?.getBoundingClientRect()
-      if (!r) return
-      void call(api.profiles?.menu({ x: Math.round(r.left), y: Math.round(r.bottom) }), 'profiles.menu')
+    profileBtn.addEventListener('click', (e) => {
+      const btn = profileBtn
+      const r = btn?.getBoundingClientRect()
+      if (!btn || !r) return
+      const hadFocus = btn === document.activeElement
+      btn.setAttribute('aria-expanded', 'true')
+      void call(
+        api.profiles?.menu({
+          x: Math.round(r.left),
+          y: Math.round(r.bottom),
+          anchor: { x: r.left, y: r.top, width: r.width, height: r.height },
+          ...(e.detail === 0 ? { keyboard: true } : {})
+        }),
+        'profiles.menu'
+      ).finally(() => {
+        btn.setAttribute('aria-expanded', 'false')
+        if (hadFocus && btn.isConnected && document.activeElement !== btn) btn.focus({ preventScroll: true })
+      })
     })
     const menuTip = withShortcut('Command palette', 'palette.open', platform)
     const menuBtn = h('button', { class: 'rn-btn rn-btn--icon', attrs: { type: 'button', title: menuTip, 'aria-label': 'Command palette' } }, icon('menu'))

@@ -210,6 +210,7 @@ test('Q9: dropping a link on the tab strip opens/navigates; file:, retronet: and
 
 // FX-B R4/N3: page context menu only offers openable link targets.
 test('R4/N3: link context menu omits "Open in new tab" for file:/retronet:/javascript: links, keeps it for http', async ({ rn, server }) => {
+  // Native menus never reach the screen (PLAN-FINAL §0); the page menu itself is themed and read via __rn.menu().
   await rn.main(({ Menu }) => {
     Menu.prototype.popup = function () {
       ;(globalThis as any).__lastMenu = this
@@ -217,18 +218,23 @@ test('R4/N3: link context menu omits "Open in new tab" for file:/retronet:/javas
   })
   await rn.navigate(`${server.base}/fixtures/ctx-links.html`)
   const tab = await rn.activeTabWcId()
+  const win = (await rn.win()).id
   const ctx = async (id: string): Promise<string[]> => {
     const box = await rn.js<{ x: number; y: number }>(tab, `(() => { const r = document.getElementById(${JSON.stringify(id)}).getBoundingClientRect(); return { x: Math.round(r.x + 20), y: Math.round(r.y + 10) } })()`)
+    const before = await rn.main((_e, w: number) => (globalThis as any).__rn.currentMenu(w)?.menuId ?? null, win)
     await rn.main(({ webContents }, a: { id: number; x: number; y: number }) => {
-      ;(globalThis as any).__lastMenu = null
       const wc = webContents.fromId(a.id)!
       wc.sendInputEvent({ type: 'mouseDown', x: a.x, y: a.y, button: 'right', clickCount: 1 })
       wc.sendInputEvent({ type: 'mouseUp', x: a.x, y: a.y, button: 'right', clickCount: 1 })
     }, { id: tab, ...box })
-    return poll(() => rn.main(() => {
-      const m = (globalThis as any).__lastMenu
-      return m ? (m.items.map((i: any) => i.id).filter(Boolean) as string[]) : null
-    }), `context menu for #${id}`)
+    const ids = await poll(() => rn.main((_e, a: { w: number; before: string | null }) => {
+      const m = (globalThis as any).__rn.currentMenu(a.w)
+      return m && m.menuId !== a.before ? (m.items.map((i: any) => i.id).filter(Boolean) as string[]) : null
+    }, { w: win, before }), `context menu for #${id}`)
+    // Close it again (Esc in the overlay) so the next right-click starts clean.
+    await rn.press('Escape', [], 'overlay')
+    await poll(() => rn.main((_e, w: number) => (globalThis as any).__rn.currentMenu(w) === null, win), 'menu closed')
+    return ids
   }
   const http = await ctx('l-http')
   expect(http).toEqual(expect.arrayContaining(['ctx.openLinkTab', 'ctx.openLinkWindow', 'ctx.openLinkIncognito', 'ctx.copyLink']))

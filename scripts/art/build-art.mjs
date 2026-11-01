@@ -5,10 +5,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ICONS, TOOLBAR_24, render94, render97, render01 } from './icons.mjs'
+import { ICONS, TOOLBAR_24, render94, render97, render99, render01 } from './icons.mjs'
 import { logoMaster, logo32, logo16, wordmark, badge } from './brand.mjs'
 import { throbber1994, throbber1997, throbber2001, loading1994, loading1997, loading2001,
-  tileStarfield, tileHorizon, thumb1994, thumb1997, thumb2001 } from './motion-art.mjs'
+  tileStarfield, tileHorizon, thumb1994, thumb1997, thumb2001,
+  throbber1999, loading1999, thumb1999, tileBubbles } from './motion-art.mjs'
+import { EGG_CREDITS } from './egg-credits.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const pub = 'src/renderer/public'
@@ -32,12 +34,16 @@ out(`${pub}/img/tile-starfield.svg`, tileStarfield(), 'y1997 new-tab tiled backg
 out(`${pub}/img/tile-horizon.svg`, tileHorizon(), 'y2001 new-tab tiled background, 128x128 (seamless)')
 out(`${pub}/img/skin-y1994.svg`, thumb1994(), 'Settings preview thumbnail, 1994 Pioneer, 160x96')
 out(`${pub}/img/skin-y1997.svg`, thumb1997(), 'Settings preview thumbnail, 1997 Comet, 160x96')
+out(`${pub}/img/tile-bubbles.svg`, tileBubbles(), 'y1999 new-tab tiled background, 160x160 (seamless pinstripes + candy circles)')
+out(`${pub}/img/skin-y1999.svg`, thumb1999(), 'Settings preview thumbnail, 1999 Gumdrop, 160x96')
 out(`${pub}/img/skin-y2001.svg`, thumb2001(), 'Settings preview thumbnail, 2001 Horizon, 160x96')
 
 // throbbers
 out(`${pub}/skins/y1994/throbber.svg`, throbber1994(), 'Throbber sprite 288x32: 9 frames of 32px (0-7 loop, 8 = reduced-motion loading frame)')
 out(`${pub}/skins/y1997/throbber.svg`, throbber1997(false), 'Throbber sprite 816x48: 17 frames of 48px (0 idle, 0-15 loop, 16 = reduced-motion loading frame)')
 out(`${pub}/skins/y1997/throbber-incognito.svg`, throbber1997(true), 'Incognito throbber sprite, same frames on a denser starfield')
+out(`${pub}/skins/y1999/throbber.svg`, throbber1999(false), 'Throbber sprite 416x32: 13 frames of 32px gumdrop pod (0 idle, 0-11 loop, 12 = reduced-motion loading frame)')
+out(`${pub}/skins/y1999/throbber-incognito.svg`, throbber1999(true), 'Incognito throbber sprite, same 13 frames with a grape dome')
 out(`${pub}/skins/y2001/throbber.svg`, throbber2001(), 'Throbber sprite 56x28: frame 0 glossy orb (::before), frame 1 halo ring (::after)')
 
 // icons
@@ -46,10 +52,13 @@ for (const n of names) {
   out(`${pub}/skins/y1994/icons/${n}.svg`, render94(n), 'icon, 16px 1-bit (use as mask-image)')
   out(`${pub}/skins/y1997/icons/${n}.svg`, render97(n, 16), 'icon, 16px 16-color pixel art')
   if (TOOLBAR_24.includes(n)) out(`${pub}/skins/y1997/icons/${n}-24.svg`, render97(n, 24), 'icon, 24px toolbar pixel art')
+  out(`${pub}/skins/y1999/icons/${n}.svg`, render99(n), 'icon, 24px candy jelly vector')
   out(`${pub}/skins/y2001/icons/${n}.svg`, render01(n), 'icon, 24px glossy vector')
 }
 out(`${pub}/skins/y1994/icons/loading.svg`, loading1994(), 'tab spinner sprite 64x16: hourglass, 4 frames')
 out(`${pub}/skins/y1997/icons/loading.svg`, loading1997(), 'tab spinner sprite 128x16: comet arc, 8 frames')
+out(`${pub}/skins/y1999/icons/loading.svg`, loading1999(false), 'tab spinner sprite 128x16: peppermint swirl, 8 frames')
+out(`${pub}/skins/y1999/icons/loading-incognito.svg`, loading1999(true), 'incognito tab spinner sprite 128x16: grape swirl with a white rim, 8 frames')
 out(`${pub}/skins/y2001/icons/loading.svg`, loading2001(), 'tab spinner sprite 192x16: 12-dot ring, 12 frames')
 
 // ---------- ASSETS.md ----------
@@ -74,8 +83,10 @@ const row = (p, note) => `| \`${p}\` | ${note} |`
 const md = `# RetroNet assets
 
 Every image, icon, throbber and logo in RetroNet is **original**, drawn for this project by the RetroNet team
-(UI designer, T6). Nothing is traced from or modelled on any real browser, operating system or company artwork, and
-no third-party trademark appears in any asset. License: same as the RetroNet project.
+(UI designer, T6), with one user-approved exception: the four easter-egg pages carry credited third-party photos
+(listed under Third-party photos below; the logos visible in them are included). Nothing else is traced from or
+modelled on any real browser, operating system or company artwork, and no third-party trademark appears in any other
+asset. License of the original art: same as the RetroNet project.
 
 Fonts are third-party and openly licensed (SIL Open Font License 1.1). Each license file ships next to the fonts in
 \`${pub}/fonts/licenses/\`.
@@ -87,8 +98,9 @@ Fonts are third-party and openly licensed (SIL Open Font License 1.1). Each lice
 
 - Source of truth: \`scripts/art/*.mjs\` (shape geometry, pixel maps, palettes). \`node scripts/art/build-art.mjs\`
   regenerates every SVG below and this file. \`npm run icons\` rasterizes the app icon and dmg background.
-- Icons share one original geometry per concept on a 16-unit grid, rendered three ways: y1994 1-bit pixel outlines
+- Icons share one original geometry per concept on a 16-unit grid, rendered four ways: y1994 1-bit pixel outlines
   (recolor with \`mask-image\` + \`currentColor\`), y1997 16-color pixel art with a black outline and top-left light,
+  y1999 candy "jelly" vector in seven flavours (lit-from-inside gradient, clipped top-left gloss, no shadow),
   y2001 smooth glossy vector with a soft shadow.
 - Lettering in the badge, wordmark and dmg background uses two small pixel alphabets hand-drawn for RetroNet
   (\`scripts/art/pixelfont.mjs\`), so the SVGs need no webfont.
@@ -113,6 +125,18 @@ ${[...new Set(FONTS.map((f) => f[3]))].map((l) => `| \`${pub}/fonts/licenses/${l
 |---|---|
 ${written.filter(([p]) => !p.endsWith('.md')).map(([p, n]) => row(p, n)).join('\n')}
 ${generated.map(([p, n]) => row(p, n)).join('\n')}
+
+## Third-party photos (hidden pages)
+
+Photos on the four hidden era pages (\`retronet://firstweb/\`, \`cascade/\`, \`clamshell/\`, \`wikiwiki/\`), all from
+Wikimedia Commons under CC BY-SA, with attribution shown on each page. Each was downscaled and had its EXIF/GPS
+metadata removed. Some show makers' logos, which is part of the approved exception. Commons tags the Cunningham photo
+with "personality rights", so it does not imply endorsement. Copyright stays with each author; each photo keeps its
+own license (not the project license).
+
+| File | Subject | Author | License | Source file page | Modification |
+|---|---|---|---|---|---|
+${EGG_CREDITS.map((e) => `| \`${pub}/${e.file}\` | ${e.subject} | ${e.author} | [${e.license}](${e.licenseUrl}) | <${e.source}> | ${e.modification} |`).join('\n')}
 
 ## Not shipped as art
 

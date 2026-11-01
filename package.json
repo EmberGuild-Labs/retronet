@@ -5,7 +5,7 @@
   "private": true,
   "main": "./out/main/index.js",
   "author": "RetroNet",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },

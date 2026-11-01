@@ -1,7 +1,7 @@
 import { SessionStateSchema } from '../../shared/ipc-contract'
 import type { z } from 'zod'
 import { createJsonStore, type JsonStore } from './json-store'
-import { stripUrlCredentials } from './url-credentials'
+import { stripTitleCredentials, stripUrlCredentials } from './url-credentials'
 
 export type SessionState = z.infer<typeof SessionStateSchema>
 export type SessionWindowRecord = SessionState['windows'][number]
@@ -13,7 +13,19 @@ function withoutCredentials(windows: SessionWindowRecord[]): SessionWindowRecord
     tabs: w.tabs.map((t) => ({
       ...t,
       url: stripUrlCredentials(t.url),
-      ...(t.history ? { history: { ...t.history, entries: t.history.entries.map((e) => ({ ...e, url: stripUrlCredentials(e.url) })) } } : {})
+      ...('title' in t && typeof t.title === 'string' ? { title: stripTitleCredentials(t.title, t.url) } : {}),
+      ...(t.history
+        ? {
+            history: {
+              ...t.history,
+              entries: t.history.entries.map((e) => ({
+                ...e,
+                url: stripUrlCredentials(e.url),
+                ...('title' in e && typeof e.title === 'string' ? { title: stripTitleCredentials(e.title, e.url) } : {})
+              }))
+            }
+          }
+        : {})
     }))
   }))
 }

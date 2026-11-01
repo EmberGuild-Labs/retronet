@@ -1,0 +1,103 @@
+/* RetroNet hidden page "clamshell" (B4, DESIGN-EGGS 2 + 3.3): 1999 Gumdrop, candy and gel.
+   Always the y1999 look (data-skin is static in the HTML). Unlayered, so it beats the skin's layers.
+   No motion of any kind (E-2): every state change is instant and static. */
+
+/* ---------- shared egg rules (DESIGN-EGGS 2) ---------- */
+.rn-egg { max-width: 760px; }
+.rn-egg p, .rn-egg li { max-width: 68ch; }
+.rn-egg__kicker { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--rn-fg-muted); }
+.rn-egg__dek { color: var(--rn-fg-muted); text-wrap: pretty; }
+.rn-egg__toc ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
+.rn-egg__fig { margin: 0 0 16px; }
+.rn-egg__fig img { display: block; max-width: 100%; height: auto; }
+.rn-egg__fig figcaption { margin-top: 6px; font-size: 14px; line-height: 1.4; text-wrap: pretty; }
+.rn-egg__caption { display: block; }
+.rn-egg__photo-credit { display: block; font-size: 13px; color: var(--rn-fg-muted); }
+.rn-egg__sources ol, .rn-egg__credits ol { margin: 0; padding-inline-start: 2.25em; }
+.rn-egg__sources li, .rn-egg__credits li { margin-bottom: 8px; line-height: 1.45; }
+.rn-egg__host { color: var(--rn-fg-muted); font-size: 13px; overflow-wrap: anywhere; }
+.rn-egg__host::before { content: "("; }
+.rn-egg__host::after { content: ")"; }
+.rn-egg__disclaimer { font-size: 14px; color: var(--rn-fg-muted); }
+.rn-egg__foot { margin-top: 24px; font-size: 14px; text-align: center; }
+.rn-egg :target { scroll-margin-top: 24px; }
+.rn-egg__pair { display: grid; grid-template-columns: var(--egg-photo-w) minmax(0, 1fr); gap: 20px; align-items: start; }
+.rn-egg__pair--end { grid-template-columns: minmax(0, 1fr) var(--egg-photo-w); }
+.rn-egg__pair--end > .rn-egg__fig { order: 2; }
+@media (max-width: 700px) {
+  .rn-egg__pair, .rn-egg__pair--end { display: block; }
+}
+
+/* ---------- 1999 Gumdrop (DESIGN-EGGS 3.3) ---------- */
+.rn-egg--y1999 { --egg-photo-w: 280px; }
+
+/* frosted panels: masthead, subjects, sources, credits */
+.rn-egg--y1999 > .rn-panel { margin: 0 0 16px; padding: 16px 20px; }
+.rn-egg--y1999 > .rn-egg__head { padding: 20px; border-radius: 16px; }
+.rn-egg--y1999 .rn-panel h2 { margin-top: 0; margin-bottom: 12px; }
+.rn-egg--y1999 .rn-panel > :last-child,
+.rn-egg--y1999 .rn-egg__copy > :last-child,
+.rn-egg--y1999 .rn-egg__credits ol > li:last-child,
+.rn-egg--y1999 .rn-egg__sources ol > li:last-child { margin-bottom: 0; }
+
+/* masthead: pixel h1 and the four gel flavour beads share one row */
+.rn-egg__title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 8px; }
+.rn-egg--y1999 .rn-egg__title-row h1 { margin: 0; color: #0A4F60; }
+.rn-egg--y1999 .rn-egg__dek { margin-bottom: 14px; }
+.rn-egg-beads { display: inline-flex; gap: 6px; }
+.rn-egg-beads i {
+  display: block; width: 14px; height: 14px; border-radius: 50%;
+  box-shadow: inset 0 -2px 3px rgb(0 0 0 / 0.18), 0 1px 1px rgb(21 32 43 / 0.2);
+}
+.rn-egg-beads i:nth-child(1) { background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.85) 0 2px, transparent 3px), #1F8FA6; }
+.rn-egg-beads i:nth-child(2) { background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.85) 0 2px, transparent 3px), #FF9A2E; }
+.rn-egg-beads i:nth-child(3) { background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.85) 0 2px, transparent 3px), #9B6FD8; }
+.rn-egg-beads i:nth-child(4) { background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.85) 0 2px, transparent 3px), #7CCB3A; }
+
+/* toc: clear-gel capsule links (28px tall, instant hover) */
+.rn-egg--y1999 .rn-egg__toc ul { gap: 8px; }
+.rn-egg--y1999 .rn-egg__toc a {
+  display: inline-flex; align-items: center; min-height: 28px; padding: 0 12px;
+  border-radius: 14px; border: 1px solid #A9B4BD; background: var(--rn99-gel-clear);
+  color: #0A5280; text-decoration: none; font: 400 13px/1 var(--rn-stack-sans01);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 1px rgb(21 32 43 / 0.12);
+}
+.rn-egg--y1999 .rn-egg__toc a:visited { color: #0A5280; }
+@media (hover: hover) {
+  .rn-egg--y1999 .rn-egg__toc a:hover { background: #EAF7FA; border-color: #176C80; }
+}
+.rn-egg--y1999 .rn-egg__toc a:focus-visible { outline: 2px solid var(--rn-focus-ring); outline-offset: 2px; }
+
+/* kicker: Noto 700 12px, deep lagoon ink */
+.rn-egg--y1999 .rn-egg__kicker { font-size: 12px; color: #0A4F60; }
+
+/* photos on white rounded mats; concentric radii: 13 outer = 8 image + 4 padding + 1 border */
+.rn-egg__mat {
+  display: block; width: fit-content; max-width: 100%; padding: 4px;
+  background: #FFFFFF; border: 1px solid #A9B4BD; border-radius: 13px;
+  box-shadow: 0 1px 2px rgb(21 32 43 / 0.12);
+}
+.rn-egg__mat img { border-radius: 8px; outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }
+.rn-egg__fig--wide .rn-egg__mat { width: min(100%, 650px); }
+.rn-egg__fig--wide .rn-egg__mat img { width: 100%; }
+.rn-egg__pair .rn-egg__mat { width: 100%; }
+.rn-egg__pair .rn-egg__mat img { width: 100%; }
+.rn-egg--y1999 .rn-egg__fig figcaption { margin-top: 8px; font-size: 13px; color: #44505B; }
+.rn-egg--y1999 .rn-egg__caption { color: #15202B; font-size: 14px; }
+
+/* source and credit lists */
+.rn-egg__credit-label { font-weight: 700; }
+.rn-egg--y1999 .rn-egg__license-note { margin-top: 12px; font-size: 14px; color: var(--rn-fg-muted); }
+
+/* disclaimer and footer sit on the pinstripe (muted text stays above 4.5:1 on its darker line) */
+.rn-egg--y1999 .rn-egg__disclaimer { margin: 8px 4px 0; }
+.rn-egg--y1999 .rn-egg__foot { margin-top: 16px; }
+
+@media (max-width: 700px) {
+  .rn-egg__pair--end > .rn-egg__fig { margin-bottom: 16px; }
+  .rn-egg__pair .rn-egg__mat { width: min(100%, 290px); }
+}
+@media (forced-colors: active) {
+  .rn-egg__fig img { outline: 1px solid CanvasText; }
+  .rn-egg--y1999 .rn-egg__toc a { border-color: LinkText; }
+}

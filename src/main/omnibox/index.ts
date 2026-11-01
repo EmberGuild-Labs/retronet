@@ -8,7 +8,8 @@ import { browserTabs } from '../tabs/tab-manager'
 import { getSearchEngine } from '../../shared/search-engines'
 import type { Rect, Suggestion } from '../../shared/types'
 import type { WindowContext } from '../types'
-import { buildSuggestions } from './suggestions'
+import { openEgg } from '../internal-api/eggs'
+import { buildSuggestions, eggHintEra } from './suggestions'
 
 export { buildSuggestions, MAX_SUGGESTIONS } from './suggestions'
 
@@ -51,6 +52,34 @@ function overlayBusy(w: WindowContext): boolean {
   return kind !== null && kind !== 'suggest'
 }
 
+/** The live (not yet dismissed past the grace) suggestion state of `w`, if any. */
+function liveState(w: WindowContext): SuggestState | undefined {
+  const s = states.get(w.id)
+  return s && (s.dismissedAt === null || Date.now() - s.dismissedAt < PICK_GRACE_MS) ? s : undefined
+}
+
+/** The egg era a row opens, but only while its skin is still the window's skin (DESIGN-EGGS 4.1). */
+function eggEraFor(w: WindowContext, item: Suggestion | undefined): ReturnType<typeof eggHintEra> {
+  const era = eggHintEra(item)
+  return era && era === w.profile.getSettings().skin ? era : null
+}
+
+/**
+ * Keyboard path of the y2001 hint row (↓ then Enter): the shell submits the row's URL through tabs.navigate, which
+ * would be a typed navigation. When the highlighted row of the live list is the hint row and `input` is its URL,
+ * open the egg the way eggs.open does instead and return true. Plain Enter (nothing highlighted) still searches.
+ */
+export function takeEggHint(w: WindowContext, input: string): boolean {
+  const s = liveState(w)
+  const item = s && s.selected >= 0 ? s.items[s.selected] : undefined
+  const era = eggEraFor(w, item)
+  if (!era || input.trim() !== item!.url) return false
+  states.delete(w.id)
+  if (w.overlayKind() === 'suggest') w.hideOverlay()
+  openEgg(w, era)
+  return true
+}
+
 export function registerOmniboxHandlers(): void {
   router.handle('omnibox.suggest', (req, ctx) => {
     const w = windowOf(ctx)
@@ -59,7 +88,8 @@ export function registerOmniboxHandlers(): void {
     const items = buildSuggestions(
       req.text,
       { bookmarks: (p, n) => stores.bookmarks.suggest(p, n), history: (p, n) => stores.history.suggest(p, n) },
-      engine
+      engine,
+      { skin: w.profile.getSettings().skin }
     )
     states.set(w.id, { items, selected: -1, dismissedAt: null })
     if (items.length === 0) {
@@ -90,14 +120,15 @@ export function registerOmniboxHandlers(): void {
 
   router.handle('omnibox.pick', (req, ctx) => {
     const w = windowOf(ctx)
-    const s = states.get(w.id)
-    const live = s && (s.dismissedAt === null || Date.now() - s.dismissedAt < PICK_GRACE_MS)
-    const item = live ? s.items[req.index] : undefined
+    const item = liveState(w)?.items[req.index]
     if (!item) throw new IpcFailure('E_NOT_FOUND', 'No such suggestion')
     states.delete(w.id)
     if (w.overlayKind() === 'suggest') w.hideOverlay()
     w.sendShell('ui', { action: 'omnibox-picked' })
-    browserTabs(w).navigate(item.url)
+    // The y2001 hint row opens its egg through the same path as eggs.open, never as a typed address.
+    const era = eggEraFor(w, item)
+    if (era) openEgg(w, era)
+    else browserTabs(w).navigate(item.url)
     return null
   })
 

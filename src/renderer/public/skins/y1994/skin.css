@@ -163,6 +163,52 @@
 :root[data-skin="y1994"][data-reduced-motion="true"] .rn-icon[data-icon="loading"] { animation: none; }
 }
 
+/* ---------- menus (A4, DESIGN-MENUS 2): per-skin --rn-menu-* tokens. Shared rules live in base/skin.css. ---------- */
+@layer rn-skin {
+:root[data-skin="y1994"] {
+  --rn-menu-font: 700 13px/1.2 var(--rn-stack-serif);
+  --rn-menu-bg: #C9CCD2;
+  --rn-menu-fg: #111318;
+  --rn-menu-fg-muted: #3E434C;
+  --rn-menu-fg-disabled: #5F646D;
+  --rn-menu-hl-bg: #111318;
+  --rn-menu-hl-fg: #FFFFFF;
+  --rn-menu-frame: 0 0 0 1px #111318, inset 2px 2px 0 #E6E8EC, inset -2px -2px 0 #5E636C;
+  --rn-menu-pad: 4px;
+  --rn-menu-sep: linear-gradient(#5E636C, #5E636C) center 3px / 100% 1px no-repeat, linear-gradient(#E6E8EC, #E6E8EC) center 4px / 100% 1px no-repeat;
+  --rn-menu-sep-margin: 0 4px;
+  --rn-menu-scroll-thumb: #5E636C;
+  --rn-menu-scroll-track: #B8BCC4;
+  --rn-menu-check-clip: polygon(0 43%, 29% 71%, 86% 0, 100% 0, 100% 29%, 29% 100%, 0 71%);
+  --rn-menu-check-w: 7px;
+  --rn-menu-check-h: 7px;
+  --rn-menu-radio-clip: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  --rn-menu-radio-w: 7px;
+  --rn-menu-radio-h: 7px;
+  --rn-menu-radius: 0;
+  --rn-menu-item-radius: 0;
+  --rn-menu-item-h: 24px;
+  --rn-menu-item-inset: 0;
+  --rn-menu-shadow: 0 0 #0000;
+  --rn-menu-disabled-shadow: none;
+  --rn-menu-hl-edge: none;
+}
+:root[data-skin="y1994"][data-incognito="true"]:not([data-surface="page"]) {
+  --rn-menu-bg: #2F3440;
+  --rn-menu-fg: #E9EBEE;
+  --rn-menu-fg-muted: #B9BEC8;
+  --rn-menu-fg-disabled: #8D93A2;
+  --rn-menu-hl-bg: #FFD24A;
+  --rn-menu-hl-fg: #111318;
+  --rn-menu-frame: 0 0 0 1px #000000, 0 0 0 2px #8D93A2, inset 2px 2px 0 #4A5162, inset -2px -2px 0 #15171C;
+  --rn-menu-sep: linear-gradient(#15171C, #15171C) center 3px / 100% 1px no-repeat, linear-gradient(#4A5162, #4A5162) center 4px / 100% 1px no-repeat;
+  --rn-menu-scroll-thumb: #8D93A2;
+  --rn-menu-scroll-track: #2F3440;
+}
+/* accelerator column: the shortcut chips render as plain text inside a menu (2.6). Specificity beats the skin .rn-kbd rule. */
+:root[data-skin="y1994"] .rn-menu .rn-menu__accel .rn-kbd { all: unset; font: inherit; font-weight: 400; color: inherit; }
+}
+
 /* ICONS:BEGIN (generated from the icons/ folder; one rule per icon) */
 @layer rn-skin {
 :root[data-skin="y1994"] .rn-icon[data-icon="audio"] { mask-image: url("icons/audio.svg"); }

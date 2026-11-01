@@ -274,6 +274,49 @@
 :root[data-skin="y2001"][data-reduced-motion="true"] .rn-btn--go:active, :root[data-skin="y2001"][data-reduced-motion="true"] .rn-btn--round:active::before { scale: none; }
 }
 
+/* ---------- menus (A4, DESIGN-MENUS 2): per-skin --rn-menu-* tokens. Shared rules live in base/skin.css. ---------- */
+@layer rn-skin {
+:root[data-skin="y2001"] {
+  --rn-menu-font: 400 13px/1.3 var(--rn-stack-sans01);
+  --rn-menu-bg: linear-gradient(90deg, #EEEBDD 0 24px, #FFFFFF 24px);
+  --rn-menu-fg: #1B1B1B;
+  --rn-menu-fg-muted: #555249;
+  --rn-menu-fg-disabled: #7D7A6E;
+  --rn-menu-hl-bg: #316AC5;
+  --rn-menu-hl-fg: #FFFFFF;
+  --rn-menu-frame: 0 0 0 1px #7F7A66;
+  --rn-menu-pad: 2px;
+  --rn-menu-sep: linear-gradient(#C5C2B2, #C5C2B2) center 3px / 100% 1px no-repeat;
+  --rn-menu-sep-margin: 0 2px 0 26px;
+  --rn-menu-scroll-thumb: #B4C8F5;
+  --rn-menu-scroll-track: #F7F5EC;
+  --rn-menu-check-clip: polygon(0 50%, 14% 36%, 38% 62%, 86% 0, 100% 14%, 38% 90%);
+  --rn-menu-check-w: 10px;
+  --rn-menu-check-h: 8px;
+  --rn-menu-radio-clip: circle(50%);
+  --rn-menu-radio-w: 6px;
+  --rn-menu-radio-h: 6px;
+  --rn-menu-radius: 0;
+  --rn-menu-item-radius: 0;
+  --rn-menu-item-h: 24px;
+  --rn-menu-item-inset: 0;
+  --rn-menu-shadow: 2px 2px 4px rgba(0, 0, 0, 0.30);
+  --rn-menu-disabled-shadow: none;
+  --rn-menu-hl-edge: none;
+}
+:root[data-skin="y2001"][data-incognito="true"]:not([data-surface="page"]) {
+  --rn-menu-bg: linear-gradient(90deg, #E6E2EF 0 24px, #FFFFFF 24px);
+  --rn-menu-hl-bg: #5A3FC0;
+  --rn-menu-frame: 0 0 0 1px #7A6FA0;
+  --rn-menu-sep: linear-gradient(#C9C2DA, #C9C2DA) center 3px / 100% 1px no-repeat;
+  --rn-menu-scroll-thumb: #B9AEE0;
+  --rn-menu-scroll-track: #F2F0F6;
+}
+/* accelerator column: the shortcut chips render as plain text inside a menu (2.6). Specificity beats the skin .rn-kbd rule. */
+:root[data-skin="y2001"] .rn-menu:not([data-has-checks]) { --rn-menu-check-col: 6px; --rn-menu-bg: #FFFFFF; --rn-menu-sep-margin: 0 2px; }
+:root[data-skin="y2001"] .rn-menu .rn-menu__accel .rn-kbd { all: unset; font: inherit; font-weight: 400; color: inherit; }
+}
+
 /* ICONS:BEGIN (generated from the icons/ folder; one rule per icon) */
 @layer rn-skin {
 :root[data-skin="y2001"] .rn-icon[data-icon="audio"] { background-image: url("icons/audio.svg"); }

@@ -7,6 +7,7 @@
 // (hover URLs would be noise); a separate role=status region announces only events flagged `announce`
 // (user-started loads finishing, and errors).
 import { displayUrl } from '@shared/url-safety'
+import { SKIN_TRAITS } from '@shared/skins'
 import { h, icon } from '../common/dom'
 import type { ShellBridge } from '../common/api'
 import type { SecurityState, SkinId, StatusEvent, TabState, WindowSnapshot } from '@shared/types'
@@ -74,7 +75,7 @@ export function createStatusBar(api: ShellBridge): StatusBar {
   return {
     el,
     render(skin) {
-      if (skin === 'y2001') el.replaceChildren(text, lamp, progress, zoom, profile, announcer)
+      if (SKIN_TRAITS[skin].statusTextFirst) el.replaceChildren(text, lamp, progress, zoom, profile, announcer)
       else el.replaceChildren(lamp, text, progress, zoom, profile, announcer)
     },
     status(ev) {

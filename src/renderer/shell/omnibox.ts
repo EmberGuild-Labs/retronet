@@ -14,11 +14,12 @@ import { h, icon } from '../common/dom'
 import type { ShellBridge } from '../common/api'
 import type { Platform, Rect, SecurityState, SkinId, Suggestion, TabState, WindowSnapshot } from '@shared/types'
 import { BOOKMARK_BAR_ID } from '@shared/types'
+import { SKIN_TRAITS } from '@shared/skins'
 import { OMNIBOX_INPUT_MAX } from '@shared/omnibox'
 import { displayUrl as visibleUrl, omniboxSegments } from '@shared/url-safety'
 import { call, withShortcut } from './toolbar'
 
-const LABELS: Record<SkinId, string> = { y1994: 'URL:', y1997: 'Location:', y2001: 'Address' }
+const LABELS: Record<SkinId, string> = { y1994: 'URL:', y1997: 'Location:', y1999: 'Web address', y2001: 'Address' }
 
 const SECURITY: Record<SecurityState, { icon: string; text: string; label: string }> = {
   secure: { icon: 'lock', text: '', label: 'Secure connection' },
@@ -333,12 +334,23 @@ export function createOmnibox(deps: OmniboxDeps): Omnibox {
     setStar(res ? res.bookmarked : was)
   })
   go.addEventListener('click', () => submit(false))
-  bookmarksBtn.addEventListener('click', () => {
+  bookmarksBtn.addEventListener('click', (e) => {
     const r = bookmarksBtn.getBoundingClientRect()
+    const hadFocus = bookmarksBtn === document.activeElement
     bookmarksBtn.setAttribute('aria-expanded', 'true')
-    void call(api.bookmarks.barFolderMenu({ folderId: BOOKMARK_BAR_ID, x: Math.round(r.left), y: Math.round(r.bottom) }), 'bookmarks.barFolderMenu').finally(() =>
+    void call(
+      api.bookmarks.barFolderMenu({
+        folderId: BOOKMARK_BAR_ID,
+        x: Math.round(r.left),
+        y: Math.round(r.bottom),
+        anchor: { x: r.left, y: r.top, width: r.width, height: r.height },
+        ...(e.detail === 0 ? { keyboard: true } : {})
+      }),
+      'bookmarks.barFolderMenu'
+    ).finally(() => {
       bookmarksBtn.removeAttribute('aria-expanded')
-    )
+      if (hadFocus && bookmarksBtn.isConnected && document.activeElement !== bookmarksBtn) bookmarksBtn.focus({ preventScroll: true })
+    })
   })
 
   function setStar(on: boolean): void {
@@ -353,8 +365,8 @@ export function createOmnibox(deps: OmniboxDeps): Omnibox {
 
   function render(skin: SkinId): void {
     label.textContent = LABELS[skin]
-    bookmarksBtn.hidden = skin !== 'y1997' || popup
-    go.hidden = skin !== 'y2001' || popup
+    bookmarksBtn.hidden = !SKIN_TRAITS[skin].bookmarksButton || popup
+    go.hidden = !SKIN_TRAITS[skin].goButton || popup
   }
 
   function update(snap: WindowSnapshot, tab: TabState | undefined): void {

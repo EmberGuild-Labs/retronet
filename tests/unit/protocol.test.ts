@@ -30,7 +30,10 @@ describe('resolveInternalPath: allowed', () => {
     ['retronet://shell/skins/y2001/icons/back.svg', r('skins', 'y2001', 'icons', 'back.svg')],
     ['retronet://about/fonts/VT323-Regular.woff2', r('fonts', 'VT323-Regular.woff2')],
     ['retronet://newtab/img/logo.svg', r('img', 'logo.svg')],
-    ['retronet://newtab/img/badge-88x31.png?v=2', r('img', 'badge-88x31.png')]
+    ['retronet://newtab/img/badge-88x31.png?v=2', r('img', 'badge-88x31.png')],
+    // hidden era pages (PLAN-FINAL 1.3): served like any page
+    ['retronet://firstweb/', r('pages', 'firstweb', 'index.html')],
+    ['retronet://wikiwiki/img/eggs/wikiwiki-2.jpg', r('img', 'eggs', 'wikiwiki-2.jpg')]
   ]
   it.each(cases)('%s', (url, expected) => {
     expect(resolveInternalPath(url, ROOT)).toBe(expected)
@@ -78,6 +81,8 @@ describe('resolveInternalPath: rejected', () => {
     // hosts
     ['unknown host', 'retronet://evil/'],
     ['unknown host asset', 'retronet://evil/assets/x.js'],
+    ['egg lookalike host', 'retronet://firstwebx/'],
+    ['egg uppercase host', 'retronet://FirstWeb/'],
     ['empty host', 'retronet:///assets/x.js'],
     ['uppercase host', 'retronet://NewTab/'],
     ['host with port', 'retronet://newtab:80/'],

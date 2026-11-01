@@ -44,7 +44,9 @@ export const ICONS = {
     ? [ink([rect(7, 2.5, 2, 11), rect(2.5, 7, 11, 2)])]
     : k === '97'
       ? [P('white', sheet()), P('gray', fold()), P('green', [rect(9, 7, 2, 7), rect(6.5, 9.5, 7, 2)], { c: 'lime' })]
-      : [P('blue', [rect(6.3, 2, 3.4, 12), rect(2, 6.3, 12, 3.4)])],
+      : k === '99'
+        ? [P('white', sheet()), P('gray', fold()), P('blue', [rect(6.8, 5.6, 2.4, 7.4), rect(4.3, 8.1, 7.4, 2.4)])]
+        : [P('blue', [rect(6.3, 2, 3.4, 12), rect(2, 6.3, 12, 3.4)])],
   close: (k) => {
     const w = k === '94' ? 1.1 : 2, a = k === '94' ? 4 : 3.5
     return [ink([line(a, a, 16 - a, 16 - a, w), line(16 - a, a, a, 16 - a, w)], { c: k === '01' ? 'dgray' : 'black' })]
@@ -90,7 +92,7 @@ export const ICONS = {
   page: (k) => [
     P('white', sheet()),
     P(k === '01' ? 'white' : 'gray', fold(), { o94: 'outline' }),
-    k === '01' ? ink([rect(5, 7, 6, 0.9), rect(5, 9.3, 6, 0.9), rect(5, 11.6, 4.5, 0.9)], { c: 'blue' }) : null,
+    k === '01' || k === '99' ? ink([rect(5, 7, 6, 0.9), rect(5, 9.3, 6, 0.9), rect(5, 11.6, 4.5, 0.9)], { c: 'blue' }) : null,
   ].filter(Boolean),
   globe: (k) => {
     const wire = k === '94' ? 1 : 1.1
@@ -282,4 +284,79 @@ export function render01(name) {
     all.map((sh) => shapeToSvg(sh, S)).join('') + '</g>'
   // shadow sits under everything; strokes on the shadow keep it as wide as the outlined icon
   return svgDoc(24, 24, (defs ? `<defs>${defs}</defs>` : '') + `<g transform="translate(1 0.5)">${shadow}${body}</g>`)
+}
+
+// ---------- y1999 "jelly" (DESIGN-Y1999 §8) ----------
+// Seven candy flavours: [light, mid, dark]. Fill = light -> mid -> lighter "caustic" bottom; 1px outline in dark;
+// white specular gloss top-left at 60%, clipped to the shape. No drop shadow.
+export const H99 = {
+  lagoon: ['#B9EEF6', '#2FA9C4', '#0E6F86'], tangerine: ['#FFD9A8', '#FF9A2E', '#C2560A'],
+  grape: ['#E3D2FA', '#9B6FD8', '#5B2E91'], lime: ['#DDF7B5', '#7CCB3A', '#3F7F14'],
+  strawberry: ['#FFC2C9', '#E8455A', '#A3122A'], honey: ['#FFF0B0', '#F2C230', '#9A6A00'],
+  smoke: ['#FFFFFF', '#C9D0D6', '#6E7C88'],
+}
+const INK99 = '#0B2730'
+// shared colour keys -> flavour (jelly parts) or ink colour (ink parts)
+const ALIAS99 = { blue: 'lagoon', navy: 'lagoon', teal: 'lagoon', cyan: 'lagoon', green: 'lime', lime: 'lime',
+  red: 'strawberry', maroon: 'strawberry', gold: 'honey', yellow: 'honey', olive: 'honey', gray: 'smoke',
+  dgray: 'smoke', white: 'smoke', black: 'smoke', violet: 'grape', purple: 'grape' }
+const INKC99 = { black: INK99, white: '#FFFFFF', whiteA: 'rgba(255,255,255,.8)', dgray: '#6E7C88', blue: '#0E6F86' }
+// per-icon overrides: key = colour key or part index; value = flavour, or '#hex' for a flat fill
+const O99 = {
+  home: { maroon: 'tangerine' },
+  find: { maroon: 'smoke' }, search: { maroon: 'smoke' },
+  audio: { 0: 'lagoon', 1: 'lagoon' },
+  muted: { 0: 'smoke', 1: 'strawberry' },
+  go: { green: 'lagoon' },
+  history: { green: 'grape' },
+  pause: { black: 'lagoon' }, play: { black: 'lagoon' },
+  camera: { 0: 'lagoon', 1: 'lagoon', 2: 'smoke' },
+  mic: { dgray: 'lagoon' },
+  location: { 1: '#FFFFFF' },
+  clipboard: { 1: '#FFFFFF' },
+  close: { black: INK99 },
+}
+const OUTLINE99 = { bookmark: '#0E6F86' } // smoke star with a lagoon outline
+const INK_HOLES99 = new Set(['lock', 'not-secure']) // keyholes drawn in ink rather than cut out
+
+export function render99(name) {
+  const parts = ICONS[name]('99')
+  const S = 1.375, o = O99[name] || {}
+  let defs = '', body = ''
+  parts.forEach((p, i) => {
+    const id = `${name}-${i}`
+    const pick = o[i] ?? o[p.c]
+    if (p.ink) {
+      const col = pick ? (pick[0] === '#' ? pick : H99[pick][2]) : INKC99[p.c] || INK99
+      body += p.s.map((sh) => shapeToSvg(sh, S, ` fill="${col}"`)).join('')
+      return
+    }
+    if (pick && pick[0] === '#') { body += p.s.map((sh) => shapeToSvg(sh, S, ` fill="${pick}"`)).join(''); return }
+    const [lt, md, dk] = H99[pick || ALIAS99[p.c] || 'smoke']
+    const ol = OUTLINE99[name] || dk
+    const bb = bbox(p.s)
+    defs += `<linearGradient id="j${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${(bb.y0 * S).toFixed(2)}" x2="0" y2="${(bb.y1 * S).toFixed(2)}">` +
+      `<stop offset="0" stop-color="${lt}"/><stop offset=".58" stop-color="${md}"/><stop offset="1" stop-color="${mix(md, lt, 0.5)}"/></linearGradient>`
+    const holes = INK_HOLES99.has(name) ? [] : p.h
+    let m = ''
+    if (holes.length) {
+      defs += `<mask id="m${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff"/>` +
+        holes.map((hh) => shapeToSvg(hh, S, ' fill="#000"')).join('') + '</mask>'
+      m = ` mask="url(#m${id})"`
+    }
+    // gloss per shape (one ellipse across separate bars would smear over the gaps)
+    let gloss = ''
+    p.s.forEach((sh, j) => {
+      const sb = bbox([sh]), sw = sb.x1 - sb.x0, shh = sb.y1 - sb.y0
+      if (sw < 2.5 || shh < 1.8) return
+      defs += `<clipPath id="c${id}-${j}">${shapeToSvg(sh, S, ' clip-rule="evenodd"')}</clipPath>`
+      const gx = (sb.x0 + sw * 0.36) * S, gy = (sb.y0 + shh * 0.26) * S, rx = sw * 0.34 * S, ry = Math.min(shh * 0.22, 3) * S
+      gloss += `<ellipse clip-path="url(#c${id}-${j})" cx="${gx.toFixed(2)}" cy="${gy.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${ry.toFixed(2)}" transform="rotate(-18 ${gx.toFixed(2)} ${gy.toFixed(2)})" fill="#FFFFFF" fill-opacity=".6"/>`
+    })
+    body += `<g${m}>` + p.s.map((sh) => shapeToSvg(sh, S, ` fill="${ol}" stroke="${ol}" stroke-width="2" stroke-linejoin="round"`)).join('') +
+      p.s.map((sh) => shapeToSvg(sh, S, ` fill="url(#j${id})"`)).join('') + gloss + '</g>'
+    if (holes.length) body += holes.map((hh) => shapeToSvg(hh, S, ` fill="none" stroke="${ol}" stroke-width="1"`)).join('')
+    if (INK_HOLES99.has(name)) body += p.h.map((hh) => shapeToSvg(hh, S, ` fill="${INK99}"`)).join('')
+  })
+  return svgDoc(24, 24, (defs ? `<defs>${defs}</defs>` : '') + `<g transform="translate(1 1)">${body}</g>`)
 }

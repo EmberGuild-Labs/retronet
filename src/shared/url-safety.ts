@@ -16,6 +16,25 @@ function parse(url: string): URL | null {
   }
 }
 
+const VIEW_SOURCE = 'view-source:'
+
+/**
+ * The page a `view-source:` URL shows (the text after the scheme), or null when `url` is not a view-source: URL.
+ * The scheme is matched through the URL parser, so `VIEW-SOURCE:` counts too. The inner URL is not validated here.
+ */
+export function viewSourceInner(url: string): string | null {
+  const u = parse(url)
+  return u?.protocol === VIEW_SOURCE ? u.href.slice(VIEW_SOURCE.length) : null
+}
+
+/** True when `url` is `view-source:` around an http(s) URL: the only source view RetroNet allows (AC54). */
+export function isWebViewSource(url: string): boolean {
+  const inner = viewSourceInner(url)
+  // The inner URL must start with its scheme: no leading spaces or controls for the parser to quietly drop.
+  const i = inner === null || !/^[a-z]/i.test(inner) ? null : parse(inner)
+  return i !== null && WEB_SCHEMES.has(i.protocol)
+}
+
 export interface NavigationContext {
   /** URL of the page that is navigating, if any (page-initiated navigations). */
   currentUrl?: string
@@ -28,7 +47,9 @@ export interface NavigationContext {
 /**
  * Whether a top-level navigation to `url` is allowed (PLAN 1.7).
  * http(s) and about:blank always; retronet: only from a retronet: page or when browser-initiated;
- * file: only when browser-initiated and typed. Everything else (javascript:, data:, blob:, ...) is false.
+ * file: only when browser-initiated and typed; view-source: only when browser-initiated and around an http(s)
+ * URL (never file:, retronet:, nested view-source:, ...; pages can never open a source view).
+ * Everything else (javascript:, data:, blob:, ...) is false.
  */
 export function navigationSchemeAllowed(url: string, ctx: NavigationContext = {}): boolean {
   const u = parse(url)
@@ -41,6 +62,7 @@ export function navigationSchemeAllowed(url: string, ctx: NavigationContext = {}
     return cur?.protocol === 'retronet:'
   }
   if (u.protocol === 'file:') return ctx.browserInitiated === true && ctx.typed === true
+  if (u.protocol === VIEW_SOURCE) return ctx.browserInitiated === true && isWebViewSource(url)
   return false
 }
 
@@ -50,10 +72,14 @@ export function isExternalAllowlisted(url: string): boolean {
   return u !== null && EXTERNAL_ALLOWLIST.has(u.protocol)
 }
 
-/** Omnibox security indicator state (AC37). A cert override for an https host shows cert-warning. */
+/**
+ * Omnibox security indicator state (AC37). A cert override for an https host shows cert-warning.
+ * A source view has the state of the page it shows (AC54); any other view-source: is insecure.
+ */
 export function securityStateFor(url: string, certOverride = false): SecurityState {
   const u = parse(url)
   if (!u) return 'insecure'
+  if (u.protocol === VIEW_SOURCE) return isWebViewSource(url) ? securityStateFor(viewSourceInner(url)!, certOverride) : 'insecure'
   switch (u.protocol) {
     case 'https:':
       return certOverride ? 'cert-warning' : 'secure'
@@ -116,6 +142,13 @@ export function displayPartsFor(url: string): UrlDisplayParts | null {
  */
 export function displayUrl(url: string): string {
   const u = parse(url)
+  // `new URL('view-source:http://u:p@h/')` has an empty username (the userinfo sits in the opaque path), so the
+  // inner URL is stripped on its own and the wrapper put back (AC73).
+  if (u?.protocol === VIEW_SOURCE) {
+    const inner = viewSourceInner(url)!
+    const stripped = displayUrl(inner)
+    return stripped === inner ? url : `${VIEW_SOURCE}${stripped}`
+  }
   if (!u || (u.username === '' && u.password === '')) return url
   u.username = ''
   u.password = ''

@@ -4,10 +4,14 @@ import { promises as fsp } from 'node:fs'
 import { extname, join, resolve, sep } from 'node:path'
 import * as electron from 'electron'
 import type { Session } from 'electron'
+import { EGG_HOSTS } from '../../shared/eggs'
 
 export const RETRONET_SCHEME = 'retronet'
 
-/** Every host the scheme answers. Anything else is a 404. */
+/**
+ * Every host the scheme answers. Anything else is a 404. The egg hosts (D-B1) are served like any page, from
+ * `pages/<slug>/index.html` with the same CSP and headers, but they are not in PAGE_HOSTS, so they get no bridge.
+ */
 export const INTERNAL_HOSTS = [
   'shell',
   'overlay',
@@ -19,7 +23,8 @@ export const INTERNAL_HOSTS = [
   'shortcuts',
   'about',
   'certerror',
-  'neterror'
+  'neterror',
+  ...EGG_HOSTS
 ] as const
 export type InternalHost = (typeof INTERNAL_HOSTS)[number]
 

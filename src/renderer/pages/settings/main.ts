@@ -8,6 +8,8 @@ import { initSkin } from '../../common/skin-loader'
 import { SKINS } from '@shared/skins'
 import { SEARCH_ENGINES } from '@shared/search-engines'
 import { GROUP_COLORS, type Settings, type SettingsPatch } from '@shared/types'
+import { createSelect } from '../../common/select'
+import '../../common/select.css'
 import './settings.css'
 
 initSkin('page')
@@ -109,14 +111,118 @@ const appearance = section(
   )
 )
 
+// ---------- Default browser (AC47) ----------
+type DbStatus = { supported: boolean; isDefault: boolean; reason?: 'unpackaged' | 'platform' }
+const dbIcon = icon('info')
+const dbText = h('span', { attrs: { id: 'rn-default-text' } })
+const dbStatus = h('p', { class: 'rn-st__status', attrs: { id: 'rn-default-status', tabindex: -1 } }, dbIcon, dbText)
+const dbBtn = h('button', { class: 'rn-btn rn-btn--primary', attrs: { type: 'button', id: 'rn-default-btn', 'aria-describedby': 'rn-default-status' }, text: 'Make RetroNet the default browser…' })
+const dbRetry = h('button', { class: 'rn-btn', attrs: { type: 'button', id: 'rn-default-retry', 'aria-describedby': 'rn-default-status' }, text: 'Try again' })
+dbRetry.hidden = true
+const dbNote = h('p', { class: 'rn-note rn-st__saved', attrs: { id: 'rn-default-note' } })
+const dbLive = h('p', { class: 'rn-sr-only', attrs: { role: 'status', id: 'rn-default-live' } })
+let dbLast: boolean | null = null
+function renderDefault(s: DbStatus): void {
+  dbIcon.dataset.icon = s.isDefault ? 'lock' : 'info'
+  dbStatus.classList.toggle('rn-st__status--ok', s.isDefault)
+  dbStatus.classList.toggle('rn-st__status--muted', !s.supported)
+  dbText.textContent = !s.supported
+    ? s.reason === 'unpackaged'
+      ? 'Setting the default browser works in the installed app, not in a development build.'
+      : "Setting the default browser isn't available on this system yet."
+    : s.isDefault
+      ? 'RetroNet is your default browser.'
+      : 'RetroNet is not your default browser.'
+  const hide = s.supported && s.isDefault
+  // A focused button that disappears drops focus to <body>; hand it to the status text instead.
+  if (hide && !dbBtn.hidden && document.activeElement === dbBtn) dbStatus.focus()
+  dbBtn.hidden = hide
+  dbRetry.hidden = true
+  dbBtn.disabled = !s.supported
+  if (s.isDefault) dbNote.textContent = ''
+  if (dbLast === false && s.isDefault) dbLive.textContent = 'RetroNet is now your default browser.'
+  dbLast = s.isDefault
+}
+let dbInflight: Promise<void> | null = null
+let dbReadAt = 0
+/** Reads the status. Overlapping calls share one request; `force` skips the 500 ms dedupe (focus and
+ *  visibilitychange both fire when the window comes back, so those callers pass nothing). */
+function readDefault(force = false): Promise<void> {
+  if (dbInflight) return dbInflight
+  if (!force && Date.now() - dbReadAt < 500) return Promise.resolve()
+  dbInflight = (async () => {
+    try {
+      const r = await api.defaultBrowser.status()
+      if (r.ok) renderDefault(r.data)
+      else showDefaultError()
+    } catch {
+      showDefaultError()
+    } finally {
+      dbReadAt = Date.now()
+      dbInflight = null
+    }
+  })()
+  return dbInflight
+}
+function showDefaultError(): void {
+  dbText.textContent = "Couldn't check the default browser setting."
+  dbIcon.dataset.icon = 'info'
+  dbBtn.hidden = true
+  dbRetry.hidden = false
+}
+dbRetry.addEventListener('click', () => {
+  dbText.textContent = 'Checking the default browser setting…'
+  dbRetry.hidden = true
+  void readDefault(true).then(() => {
+    if (dbRetry.hidden === false) dbRetry.focus()
+    else dbStatus.focus()
+  })
+})
+dbBtn.addEventListener('click', async () => {
+  dbBtn.disabled = true
+  const r = await api.defaultBrowser.set()
+  if (r.ok && !r.data.isDefault) dbNote.textContent = 'Confirm in the system dialog that just opened.'
+  else if (!r.ok) dbNote.textContent = "Couldn't change the default browser. Try again."
+  window.setTimeout(() => void readDefault(true), 1000)
+  void readDefault(true)
+})
+const defaultBrowser = section(
+  'default-browser',
+  'Default browser',
+  dbStatus,
+  h('div', { class: 'rn-st__inline' }, dbBtn, dbRetry),
+  dbNote,
+  h('p', { class: 'rn-help', text: 'Links you open in other apps will open in RetroNet.' }),
+  dbLive
+)
+
+// ---------- Sounds (AC55) ----------
+const soundNote = savedNote()
+const soundInput = h('input', { attrs: { type: 'checkbox', id: 'rn-dialup', 'aria-describedby': 'rn-dialup-help' } })
+soundInput.addEventListener('change', () => void save({ dialupSound: soundInput.checked }, soundNote))
+const sounds = section(
+  'sounds',
+  'Sounds',
+  h(
+    'div',
+    { class: 'rn-st__row' },
+    h('label', { class: 'rn-check', attrs: { for: soundInput.id } }, soundInput, h('span', {}, h('span', { text: 'Play dial-up sound when loading pages' }), h('span', { class: 'rn-help rn-st__help', attrs: { id: 'rn-dialup-help' }, text: 'An original modem-style sound, under 3 seconds, when you open a page from the address bar, a bookmark or Home. Never in incognito windows. Muted tabs stay silent.' }))),
+    soundNote.el
+  )
+)
+
 // ---------- Search ----------
 const searchNote = savedNote()
-const searchSelect = h('select', { class: 'rn-input rn-st__select', attrs: { id: 'rn-search-engine' } }, ...SEARCH_ENGINES.map((e) => h('option', { attrs: { value: e.id }, text: e.name })))
-searchSelect.addEventListener('change', () => void save({ searchEngine: searchSelect.value as Settings['searchEngine'] }, searchNote))
+const searchSelect = createSelect({
+  id: 'rn-search-engine',
+  labelledBy: 'rn-search-engine-label',
+  options: SEARCH_ENGINES.map((e) => ({ value: e.id, label: e.name })),
+  onChange: (v) => void save({ searchEngine: v as Settings['searchEngine'] }, searchNote)
+})
 const search = section(
   'search',
   'Search',
-  h('div', { class: 'rn-field' }, h('label', { attrs: { for: searchSelect.id }, text: 'Search engine used in the address bar' }), h('div', { class: 'rn-st__inline' }, searchSelect, searchNote.el))
+  h('div', { class: 'rn-field' }, h('span', { class: 'rn-label', attrs: { id: 'rn-search-engine-label' }, text: 'Search engine used in the address bar' }), h('div', { class: 'rn-st__inline' }, searchSelect, searchNote.el))
 )
 
 // ---------- Home & startup ----------
@@ -278,14 +384,18 @@ const clearChecks = clearKinds.map((k) => {
   clearInputs.set(k.key, input)
   return h('label', { class: 'rn-check', attrs: { for: input.id } }, input, h('span', { text: k.label }))
 })
-const rangeSelect = h(
-  'select',
-  { class: 'rn-input rn-st__select', attrs: { id: 'rn-clear-range', 'aria-describedby': 'rn-clear-range-note' } },
-  h('option', { attrs: { value: 'hour' }, text: 'Last hour' }),
-  h('option', { attrs: { value: 'day' }, text: 'Last 24 hours' }),
-  h('option', { attrs: { value: 'week' }, text: 'Last 7 days' }),
-  h('option', { attrs: { value: 'all', selected: true }, text: 'All time' })
-)
+const rangeSelect = createSelect({
+  id: 'rn-clear-range',
+  labelledBy: 'rn-clear-range-label',
+  describedBy: 'rn-clear-range-note',
+  value: 'all',
+  options: [
+    { value: 'hour', label: 'Last hour' },
+    { value: 'day', label: 'Last 24 hours' },
+    { value: 'week', label: 'Last 7 days' },
+    { value: 'all', label: 'All time' }
+  ]
+})
 const clearBtn = h('button', { class: 'rn-btn rn-btn--danger', attrs: { type: 'submit' }, text: 'Clear data' })
 const clearForm = h(
   'form',
@@ -293,7 +403,7 @@ const clearForm = h(
   h('h3', { attrs: { id: 'rn-clear-title' }, text: 'Clear browsing data' }),
   h('fieldset', { class: 'rn-st__plain', attrs: { 'aria-describedby': 'rn-clear-err' } }, h('legend', { class: 'rn-label', text: 'What to clear' }), ...clearChecks),
   clearErr,
-  h('div', { class: 'rn-field rn-st__range' }, h('label', { attrs: { for: rangeSelect.id }, text: 'Time range' }), rangeSelect),
+  h('div', { class: 'rn-field rn-st__range' }, h('span', { class: 'rn-label', attrs: { id: 'rn-clear-range-label' }, text: 'Time range' }), rangeSelect),
   h('p', { class: 'rn-help', attrs: { id: 'rn-clear-range-note' }, text: 'The time range applies to history and the downloads list. Cookies, site data and cached files are always cleared for all time.' }),
   h('div', { class: 'rn-st__inline' }, clearBtn, clearNote.el)
 )
@@ -540,6 +650,8 @@ const shortcuts = section('shortcuts', 'Shortcuts', h('p', {}, h('a', { attrs: {
 // ---------- frame + nav ----------
 const SECTIONS: Array<[string, string]> = [
   ['appearance', 'Appearance'],
+  ['default-browser', 'Default browser'],
+  ['sounds', 'Sounds'],
   ['search', 'Search'],
   ['home', 'Home & startup'],
   ['downloads', 'Downloads'],
@@ -550,7 +662,7 @@ const SECTIONS: Array<[string, string]> = [
 ]
 const navLinks = SECTIONS.map(([id, label]) => h('a', { attrs: { href: `#${id}` }, data: { section: id }, text: label }))
 const nav = h('nav', { class: 'rn-settings__nav', attrs: { 'aria-label': 'Settings sections' } }, ...navLinks)
-const content = h('div', { class: 'rn-settings__content', attrs: { id: 'rn-settings-content', tabindex: -1 } }, appearance, search, homeStartup, downloads, privacy, permissions, profilesSec, shortcuts)
+const content = h('div', { class: 'rn-settings__content', attrs: { id: 'rn-settings-content', tabindex: -1 } }, appearance, defaultBrowser, sounds, search, homeStartup, downloads, privacy, permissions, profilesSec, shortcuts)
 const skip = h('a', { class: 'rn-skip rn-btn', attrs: { href: '#rn-settings-content' }, text: 'Skip to settings content' })
 skip.addEventListener('click', (e) => {
   e.preventDefault()
@@ -610,6 +722,7 @@ function render(): void {
   for (const [id, input] of skinInputs) input.checked = id === settings.skin
   motionInput.checked = settings.reducedMotion
   barInput.checked = settings.bookmarkBar
+  soundInput.checked = settings.dialupSound
   searchSelect.value = settings.searchEngine
   const isNew = settings.homePage === NEWTAB && !homeDraftCustom
   homeNew.checked = isNew
@@ -631,15 +744,18 @@ async function loadSettings(): Promise<void> {
 
 // Skin / reduced-motion changes from elsewhere (palette, another settings tab) keep the radios honest.
 api.on('skin', () => void loadSettings())
+window.addEventListener('focus', () => void readDefault())
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return
   void loadSettings()
+  void readDefault()
   void loadPermissions()
   if (!renamingId && !adding) void loadProfiles()
 })
 
 void (async () => {
   await loadSettings()
+  void readDefault()
   await Promise.all([loadPermissions(), loadProfiles()])
   const hash = location.hash.slice(1)
   if (hash && document.getElementById(hash)) {
